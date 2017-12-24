@@ -338,7 +338,6 @@ public class MapSettings : MonoBehaviour
         return new Pokemon(list[encounterNumber].ID, Pokemon.Gender.CALCULATE,
             Random.Range(list[encounterNumber].minLevel, list[encounterNumber].maxLevel + 1),
             null, null, null, -1);
-        
     }
 }
 

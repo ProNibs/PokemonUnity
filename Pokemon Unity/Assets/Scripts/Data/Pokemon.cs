@@ -123,42 +123,17 @@ public class Pokemon
         this.nickname = nickname;
         //SET UP FORMS LATER #####################################################################################
         this.form = 0;
-        this.gender = gender;
-        //if gender is CALCULATE, then calculate gender using maleRatio
-        if (gender == Gender.CALCULATE)
-        {
-            if (thisPokemonData.getMaleRatio() < 0)
-            {
-                this.gender = Gender.NONE;
-            }
-            else if (Random.Range(0f, 100f) <= thisPokemonData.getMaleRatio())
-            {
-                this.gender = Gender.MALE;
-            }
-            else
-            {
-                this.gender = Gender.FEMALE;
-            }
-        }
+        this.gender = calcGender(gender, thisPokemonData);
         this.level = level;
+
         //Find exp for current level, and next level.
         this.exp = PokemonDatabase.getLevelExp(thisPokemonData.getLevelingRate(), level);
         this.nextLevelExp = PokemonDatabase.getLevelExp(thisPokemonData.getLevelingRate(), level + 1);
         this.friendship = thisPokemonData.getBaseFriendship();
 
         this.isShiny = isShiny;
-        if (isShiny)
-        {
-            this.rareValue = Random.Range(0, 16);
-        }
-        else
-        {
-            this.rareValue = Random.Range(16, 65536);
-            if (this.rareValue < 19)
-            {
-                this.pokerus = true;
-            }
-        }
+        this.rareValue = initRareValue(this.isShiny);
+        this.pokerus = initPokerus(this.rareValue);
 
         this.status = Status.NONE;
         this.sleepTurns = 0;
@@ -166,31 +141,10 @@ public class Pokemon
         this.heldItem = heldItem;
 
         this.OT = (string.IsNullOrEmpty(OT)) ? SaveData.currentSave.playerName : OT;
-        if (this.OT != SaveData.currentSave.playerName)
-        {
-            this.IDno = Random.Range(0, 65536); //if owned by another trainer, assign a random number. 
-        } //this way if they trade it to you, it will have a different number to the player's.
-        else
-        {
-            this.IDno = SaveData.currentSave.playerID;
-        }
+        this.IDno = initIDno(this.OT);
 
         this.metLevel = level;
-        if (PlayerMovement.player != null)
-        {
-            if (PlayerMovement.player.accessedMapSettings != null)
-            {
-                this.metMap = PlayerMovement.player.accessedMapSettings.mapName;
-            }
-            else
-            {
-                this.metMap = "Somewhere";
-            }
-        }
-        else
-        {
-            this.metMap = "Somewhere";
-        }
+        this.metMap = initMetMap();
         this.metDate = System.DateTime.Today.Day + "/" + System.DateTime.Today.Month + "/" + System.DateTime.Today.Year;
 
         //Set IVs 
@@ -244,25 +198,7 @@ public class Pokemon
 
         //SET UP FORMS LATER #####################################################################################
         this.form = 0;
-
-        this.gender = gender;
-        //if gender is CALCULATE, then calculate gender using maleRatio
-        if (gender == Gender.CALCULATE)
-        {
-            if (thisPokemonData.getMaleRatio() < 0)
-            {
-                this.gender = Gender.NONE;
-            }
-            else if (Random.Range(0f, 100f) <= thisPokemonData.getMaleRatio())
-            {
-                this.gender = Gender.MALE;
-            }
-            else
-            {
-                this.gender = Gender.FEMALE;
-            }
-        }
-
+        this.gender = calcGender(gender, thisPokemonData);
         this.level = level;
         //Find exp for current level, and next level.
         this.exp = PokemonDatabase.getLevelExp(thisPokemonData.getLevelingRate(), level);
@@ -276,44 +212,17 @@ public class Pokemon
         {
             this.isShiny = true;
         }
-        else if (this.rareValue < 19)
-        {
-            this.pokerus = true;
-        }
-
+        this.pokerus = initPokerus(this.rareValue);
         this.status = Status.NONE;
         this.sleepTurns = 0;
-
         this.caughtBall = caughtBall;
         this.heldItem = heldItem;
-
         this.metLevel = level;
-        if (PlayerMovement.player != null)
-        {
-            if (PlayerMovement.player.accessedMapSettings != null)
-            {
-                this.metMap = PlayerMovement.player.accessedMapSettings.mapName;
-            }
-            else
-            {
-                this.metMap = "Somewhere";
-            }
-        }
-        else
-        {
-            this.metMap = "Somewhere";
-        }
+        this.metMap = initMetMap();
         this.metDate = System.DateTime.Today.Day + "/" + System.DateTime.Today.Month + "/" + System.DateTime.Today.Year;
 
         this.OT = (string.IsNullOrEmpty(OT)) ? SaveData.currentSave.playerName : OT;
-        if (this.OT != SaveData.currentSave.playerName)
-        {
-            this.IDno = Random.Range(0, 65536); //if owned by another trainer, assign a random number. 
-        } //this way if they trade it to you, it will have a different number to the player's.
-        else
-        {
-            this.IDno = SaveData.currentSave.playerID;
-        }
+        this.IDno = initIDno(this.OT);
 
         //Set IVs randomly between 0 and 32 (32 is exlcuded)
         this.IV_HP = Random.Range(0, 32);
@@ -524,6 +433,82 @@ public class Pokemon
         this.nickname = nickname;
     }
 
+    // Initialize Gender
+    private Gender calcGender(Gender gender, PokemonData thisPokemonData)
+    {
+        //if gender is CALCULATE, then calculate gender using maleRatio
+        if (gender == Gender.CALCULATE)
+        {
+            if (thisPokemonData.getMaleRatio() < 0)
+            {
+                return Gender.NONE;
+            }
+            else if (Random.Range(0f, 100f) <= thisPokemonData.getMaleRatio())
+            {
+                return Gender.MALE;
+            }
+            else
+            {
+                return Gender.FEMALE;
+            }
+        }
+        else
+        {
+            return gender;
+        }
+    }
+
+    // Initialize RareValue
+    private int initRareValue(bool isShiny)
+    {
+        if (isShiny)
+        {
+            return Random.Range(0, 16);
+        }
+        else
+        {
+            return Random.Range(16, 65536);
+        }
+    }
+
+    // Initialize PokeRus
+    private bool initPokerus(int rareValue)
+    { 
+        if (rareValue< 19)
+        {
+                return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+
+    private int initIDno(string OT)
+    {
+        if (this.OT != SaveData.currentSave.playerName)
+        {
+            return Random.Range(0, 65536); //if owned by another trainer, assign a random number. 
+        } //this way if they trade it to you, it will have a different number to the player's.
+        else
+        {
+            return SaveData.currentSave.playerID;
+        }
+    }
+
+    private string initMetMap()
+    {
+        if ( (PlayerMovement.player != null) && 
+            (PlayerMovement.player.accessedMapSettings != null))
+        {
+            return PlayerMovement.player.accessedMapSettings.mapName;
+        }
+        else
+        {
+            return "Somewhere";
+        }
+    }
     public string swapHeldItem(string newItem)
     {
         string oldItem = this.heldItem;
@@ -1326,7 +1311,6 @@ public class Pokemon
         return ability;
     }
 
-
     public int getMoveIndex(string move)
     {
         for (int i = 0; i < moveset.Length; i++)
@@ -1359,14 +1343,12 @@ public class Pokemon
         this.moveset[target2] = temp;
     }
 
-
     private void ResetPP(int index)
     {
         PPups[index] = 0;
         maxPP[index] = Mathf.FloorToInt(MoveDatabase.getMove(moveset[index]).getPP() * ((PPups[index] * 0.2f) + 1));
         PP[index] = maxPP[index];
     }
-
 
     /// Returns false if no room to add the new move OR move already is learned.
     public bool addMove(string newMove)
@@ -1522,7 +1504,6 @@ public class Pokemon
         return null;
     }
 
-
     public int[] getPPups()
     {
         return PPups;
@@ -1543,7 +1524,6 @@ public class Pokemon
         return PP[index];
     }
 
-
     public Sprite[] GetFrontAnim_()
     {
         return GetAnimFromID_("PokemonSprites", pokemonID, gender, isShiny);
@@ -1553,7 +1533,6 @@ public class Pokemon
     {
         return GetAnimFromID_("PokemonBackSprites", pokemonID, gender, isShiny);
     }
-
 
     public static Sprite[] GetFrontAnimFromID_(int ID, Gender gender, bool isShiny)
     {
@@ -1602,7 +1581,6 @@ public class Pokemon
         return animation;
     }
 
-
     public Sprite[] GetIcons_()
     {
         return GetIconsFromID_(pokemonID, isShiny);
@@ -1635,7 +1613,6 @@ public class Pokemon
         return Resources.Load<AudioClip>("Audio/cry/" + convertLongID(ID));
     }
 
-
     public Texture[] GetFrontAnim()
     {
         return GetAnimFromID("PokemonSprites", pokemonID, gender, isShiny);
@@ -1655,7 +1632,6 @@ public class Pokemon
     {
         return GetSpriteFromID(pokemonID, isShiny, getLight);
     }
-
 
     public static Texture[] GetFrontAnimFromID(int ID, Gender gender, bool isShiny)
     {
@@ -1708,7 +1684,6 @@ public class Pokemon
         }
         return icons;
     }
-
 
     public static Sprite[] GetSpriteFromID(int ID, bool isShiny, bool getLight)
     {

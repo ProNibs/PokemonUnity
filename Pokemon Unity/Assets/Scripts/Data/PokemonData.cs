@@ -280,25 +280,24 @@ public class PokemonData
 
     public string getAbility(int ability)
     {
-        if (ability == 0)
+        switch(ability)
         {
-            return ability1;
-        }
-        else if (ability == 1)
-        {
-            if (ability2 == null)
-            {
+            case 0:
                 return ability1;
-            }
-            return ability2;
-        }
-        else if (ability == 2)
-        {
-            if (hiddenAbility == null)
-            {
-                return ability1;
-            }
-            return hiddenAbility;
+
+            case 1:
+                if (ability2 == null)
+                {
+                    return ability1;
+                }
+                return ability2;
+
+            case 2:
+                if (hiddenAbility == null)
+                {
+                    return ability1;
+                }
+                return hiddenAbility;
         }
         return null;
     }
@@ -376,49 +375,38 @@ public class PokemonData
     {
         //Set moveset based off of the highest level moves possible.
         string[] moveset = new string[4];
-        int i = movesetLevels.Length - 1; //work backwards so that the highest level move possible is grabbed first
-        while (moveset[3] == null)
-        {
-            if (movesetLevels[i] <= level)
-            {
-                moveset[3] = movesetMoves[i];
+        int filledMoveset = 0;
+
+        for (int i = movesetLevels.Length - 1; i >= 0; i--)
+        {       //  Iterate backwards
+            if (movesetLevels[i] > level)
+            {   //  Current moveset level is above current level 
+                break;
             }
-            i -= 1;
-        }
-        if (i >= 0)
-        {
-            //if i is at least 0 still, then you can grab the next move down.
-            moveset[2] = movesetMoves[i];
-            i -= 1;
-            if (i >= 0)
-            {
-                //if i is at least 0 still, then you can grab the next move down.
-                moveset[1] = movesetMoves[i];
-                i -= 1;
-                if (i >= 0)
+            else
+            {   // Moveset is now identified
+                filledMoveset += 1; // Cleaner to do before switch
+                switch (filledMoveset)
                 {
-                    //if i is at least 0 still, then you can grab the last move down.
-                    moveset[0] = movesetMoves[i];
-                    i -= 1;
+                    case 1: // empty moveset
+                        moveset[0] = movesetMoves[i];
+                        break;
+                    case 2: 
+                        moveset[1] = movesetMoves[i];
+                        break;
+                    case 3: 
+                        moveset[2] = movesetMoves[i];
+                        break;
+                    case 4: // Filled moveset
+                        moveset[3] = movesetMoves[i];
+                        break;
+                    default: // 5th+ time to come here
+                        return moveset;
                 }
             }
+
         }
-        i = 0;
-        int i2 = 0; //if the first move is null, then the array will need to be packed down
-        if (moveset[0] == null)
-        {
-            //(nulls moved to the end of the array)
-            while (i < 3)
-            {
-                while (moveset[i] == null)
-                {
-                    i += 1;
-                }
-                moveset[i2] = moveset[i];
-                moveset[i] = null;
-                i2 += 1;
-            }
-        }
+
         return moveset;
     }
 }
