@@ -145,7 +145,7 @@ public class SummaryHandler : MonoBehaviour
     void Awake()
     {
         Transform selectedInfo = transform.Find("SelectedInfo");
-
+        
         selectedCaughtBall = selectedInfo.Find("SelectedCaughtBall").GetComponent<Image>();
         selectedNameShadow = selectedInfo.Find("SelectedName").GetComponent<Text>();
         selectedName = selectedNameShadow.transform.Find("Text").GetComponent<Text>();
@@ -473,7 +473,7 @@ public class SummaryHandler : MonoBehaviour
         abilityName.text = PokemonDatabase.getPokemon(selectedPokemon.getID()).getAbility(selectedPokemon.getAbility());
         abilityNameShadow.text = abilityName.text;
         //abilities not yet implemented
-        abilityDescription.text = "";
+        abilityDescription.text = AbilityDatabase.getAbilityDescription(abilityName.text);
         abilityDescriptionShadow.text = abilityDescription.text;
 
         updateSelectionMoveset(selectedPokemon);

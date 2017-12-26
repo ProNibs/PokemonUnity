@@ -3,6 +3,21 @@
 using UnityEngine;
 using System.Collections;
 
+public enum Target
+{
+    SELF,
+    ADJACENT,
+    ANY,
+    ADJACENTALLY,
+    ADJACENTOPPONENT,
+    ADJACENTALLYSELF,
+    ALL,
+    ALLADJACENT,
+    ALLADJACENTOPPONENT,
+    ALLOPPONENT,
+    ALLALLY
+};
+
 public class MoveData
 {
     public enum Effect
@@ -61,21 +76,7 @@ public class MoveData
         TOUGH
     }
 
-    public enum Target
-    {
-        SELF,
-        ADJACENT,
-        ANY,
-        ADJACENTALLY,
-        ADJACENTOPPONENT,
-        ADJACENTALLYSELF,
-        ALL,
-        ALLADJACENT,
-        ALLADJACENTOPPONENT,
-        ALLOPPONENT,
-        ALLALLY
-    }
-
+    
     private string name;
 
     private PokemonData.Type type;

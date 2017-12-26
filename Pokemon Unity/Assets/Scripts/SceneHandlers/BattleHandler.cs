@@ -1769,7 +1769,8 @@ public class BattleHandler : MonoBehaviour
             PokemonDatabase.getPokemon(selectedPokemon.getID()).getAbility(selectedPokemon.getAbility());
         pokemonSummaryAbilityNameShadow.text = pokemonSummaryAbilityName.text;
         //abilities not yet implemented
-        pokemonSummaryAbilityDescription.text = "";
+        pokemonSummaryAbilityDescription.text = 
+            AbilityDatabase.getAbilityDescription(pokemonSummaryAbilityName.text);
         pokemonSummaryAbilityDescriptionShadow.text = pokemonSummaryAbilityDescription.text;
 
         //Moves

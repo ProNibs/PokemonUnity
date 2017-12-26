@@ -670,6 +670,7 @@ public class Pokemon
         }
     //*/
 
+    // This is only called for animating evolutions
     public int getEvolutionID(string currentMethod)
     {
         PokemonData thisPokemonData = PokemonDatabase.getPokemon(pokemonID);
