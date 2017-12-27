@@ -376,12 +376,11 @@ public class PokemonData
         //Set moveset based off of the highest level moves possible.
         string[] moveset = new string[4];
         int filledMoveset = 0;
-
         for (int i = movesetLevels.Length - 1; i >= 0; i--)
         {       //  Iterate backwards
             if (movesetLevels[i] > level)
             {   //  Current moveset level is above current level 
-                break;
+                continue;
             }
             else
             {   // Moveset is now identified
@@ -390,23 +389,22 @@ public class PokemonData
                 {
                     case 1: // empty moveset
                         moveset[0] = movesetMoves[i];
-                        break;
+                        continue;
                     case 2: 
                         moveset[1] = movesetMoves[i];
-                        break;
+                        continue;
                     case 3: 
                         moveset[2] = movesetMoves[i];
-                        break;
+                        continue;
                     case 4: // Filled moveset
                         moveset[3] = movesetMoves[i];
-                        break;
+                        continue;
                     default: // 5th+ time to come here
                         return moveset;
                 }
             }
 
         }
-
         return moveset;
     }
 }
