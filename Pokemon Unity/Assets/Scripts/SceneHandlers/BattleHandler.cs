@@ -4964,8 +4964,8 @@ public class BattleHandler : MonoBehaviour
                             //MOVE
                             //debug autoselect targetIndex (target selection not yet implemented)
                             int targetIndex = 3;
-                            if (commandMove[movingPokemon].getTarget() == MoveData.Target.SELF ||
-                                commandMove[movingPokemon].getTarget() == MoveData.Target.ADJACENTALLYSELF)
+                            if (commandMove[movingPokemon].getTarget() == Target.SELF ||
+                                commandMove[movingPokemon].getTarget() == Target.ADJACENTALLYSELF)
                             {
                                 targetIndex = movingPokemon;
                             }
