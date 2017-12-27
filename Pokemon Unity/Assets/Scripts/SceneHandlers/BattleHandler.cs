@@ -3531,12 +3531,10 @@ public class BattleHandler : MonoBehaviour
         return true;
     }
 
-    
     private IEnumerator AITurnSelection()
     {
         //AI not yet implemented properly.
         //the following code randomly chooses a move to use with no further thought.
-        Debug.Log("AI Turn Attempted");
         for (int i = 0; i < pokemonPerSide; i++)
         {
             //do for every pokemon on enemy side
