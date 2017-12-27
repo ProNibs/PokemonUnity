@@ -1334,7 +1334,7 @@ public static class PokemonDatabase
             },
             new string[] {},
             new int[] {393}, new string[] {"Level,36"}),
-        new PokemonData(393, "Piplup", PokemonData.Type.WATER, PokemonData.Type.NONE, "Torrent", null, "Defiant",
+        new PokemonData(393, "Piplup", PokemonData.Type.WATER, PokemonData.Type.NONE, "Torrent", "Intimidate", "Defiant",
             87.5f, 45, PokemonData.EggGroup.WATER1, PokemonData.EggGroup.FIELD, 5355, 0.4f, 5.2f,
             63, PokemonData.LevelingRate.MEDIUMSLOW, 0, 0, 0, 1, 0, 0, PokemonData.PokedexColor.BLUE, 70,
             "Penguin",

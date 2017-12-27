@@ -8,6 +8,8 @@ public class AbilityDatabase
     {
         new AbilityData("Null", AbilityData.BattleOccurance.OTHER, false, Target.SELF,
             "A very false Description"),
+        new AbilityData("Intimidate", AbilityData.BattleOccurance.ON_ENTRY, false, Target.ALLOPPONENT,
+            "RAWR, I INTIMIDATE YOU!"),
         new AbilityData("Synchronize", AbilityData.BattleOccurance.MOVE_HITTING, false, Target.SELF,
             "A description of Synchronize"),
         new AbilityData("String2", AbilityData.BattleOccurance.MOVE_HITTING, true, Target.ALL,
