@@ -3505,8 +3505,33 @@ public class BattleHandler : MonoBehaviour
     //
     //  Helper Functions for Battle Controller
     //
-    //////////////////////////////////
+    /////////////////////////////////
+    private int[] initInitialLevels()
+    {   // Used after battle is finished to check for evolutions
+        int[] initialLevels = new int[6];
+        for (int i = 0; i < initialLevels.Length; i++)
+        {
+            if (SaveData.currentSave.PC.boxes[0][i] != null)
+            {
+                initialLevels[i] = SaveData.currentSave.PC.boxes[0][i].getLevel();
+            }
+        }
+        return initialLevels;
+    }
 
+    private bool UpdateRunningAfterFlee(int movingPokemon, int playerFleeAttempts)
+    {
+        Debug.Log(movingPokemon);
+        int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
+                                                 30 * playerFleeAttempts;
+        if (Random.Range(0, 256) < fleeChance)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    
     private IEnumerator AITurnSelection()
     {
         //AI not yet implemented properly.
@@ -3542,19 +3567,6 @@ public class BattleHandler : MonoBehaviour
 
 
         yield return new WaitForSeconds(0.3f);
-    }
-
-    private int[] initInitialLevels()
-    {   // Used after battle is finished to check for evolutions
-        int[] initialLevels = new int[6];
-        for (int i = 0; i < initialLevels.Length; i++)
-        {
-            if (SaveData.currentSave.PC.boxes[0][i] != null)
-            {
-                initialLevels[i] = SaveData.currentSave.PC.boxes[0][i].getLevel();
-            }
-        }
-        return initialLevels;
     }
 
     private IEnumerator AnimateBattleBegin(bool trainerBattle, Pokemon[] opponentParty, string opponentName)
@@ -3625,18 +3637,6 @@ public class BattleHandler : MonoBehaviour
         yield return new WaitForSeconds(.1f);
     }
 
-    private bool UpdateRunningAfterFlee(int movingPokemon, int playerFleeAttempts)
-    {
-        Debug.Log(movingPokemon);
-        int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
-                                                 30 * playerFleeAttempts;
-        if (Random.Range(0, 256) < fleeChance)
-        {
-            return false;
-        }
-        return true;
-    }
-
     private IEnumerator RunFromBattleAnimation(bool running)
     { 
         if (!running)
@@ -3654,6 +3654,105 @@ public class BattleHandler : MonoBehaviour
         {
             yield return StartCoroutine(drawTextAndWait("Can't escape!"));
         }
+    }
+
+    ////////////
+    // Pokeball Related Functions
+    ///////////
+    private IEnumerator PokeballThrowAnimation(int movingPokemon, bool trainerBattle)
+    {
+        //pokeball animation not yet implemented
+        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
+            " used one " + commandItem[movingPokemon].getName() + "!", 2.4f));
+        yield return new WaitForSeconds(1.2f);
+        if (trainerBattle)
+        {
+            yield return StartCoroutine(drawTextAndWait("The trainer blocked the ball!", 2.4f));
+            yield return StartCoroutine(drawTextAndWait("Don't be a theif!", 2.4f));
+        }
+    }
+
+    private IEnumerator SuccessfulPokeballAnimation(int targetIndex)
+    {
+       //pokeball animation not yet implemented
+        yield return StartCoroutine(faintPokemonAnimation(opponent1));
+        yield return new WaitForSeconds(1f);
+
+        yield return StartCoroutine(drawTextAndWait(
+                generatePreString(targetIndex) + pokemon[targetIndex].getName() +
+                " \\nwas caught!", 2.4f));
+
+        Dialog.DrawDialogBox();
+        yield return StartCoroutine(Dialog.DrawTextSilent(
+                "Would you like to give a nickname \\nto your new " +
+                pokemon[targetIndex].getName() + "?"));
+        yield return StartCoroutine(Dialog.DrawChoiceBox());
+        Dialog.UndrawDialogBox();
+        Dialog.UndrawChoiceBox();
+    }
+
+    private IEnumerator GiveNicknameAnimation(int targetIndex)
+    {
+        SfxHandler.Play(selectClip);
+        yield return StartCoroutine(ScreenFade.main.Fade(false, 0.4f));
+
+        Scene.main.Typing.gameObject.SetActive(true);
+        StartCoroutine(Scene.main.Typing.control(10, "",
+            pokemon[targetIndex].getGender(), pokemon[targetIndex].GetIcons_()));
+        while (Scene.main.Typing.gameObject.activeSelf)
+        {
+            yield return null;
+        }
+        yield return StartCoroutine(ScreenFade.main.Fade(true, 0.4f));
+    }
+
+    private int GetShakeProbability(int targetIndex, int movingPokemon)
+    {
+        float ballRate = (float)commandItem[movingPokemon].getFloatParameter();
+        float catchRate = (float)PokemonDatabase.getPokemon(pokemon[targetIndex].getID()).getCatchRate();
+        float statusRate = 1f;
+        if ((pokemon[targetIndex].getStatus() != Pokemon.Status.NONE))
+        {
+            statusRate = (pokemon[targetIndex].getStatus() == Pokemon.Status.ASLEEP ||
+                          pokemon[targetIndex].getStatus() == Pokemon.Status.FROZEN)
+                ? 2.5f
+                : 1.5f;
+        }
+
+        int modifiedRate = Mathf.FloorToInt(((3 * (float)pokemon[targetIndex].getHP() -
+            2 * (float)pokemon[targetIndex].getCurrentHP())
+            * catchRate * ballRate) / (3 * (float)pokemon[targetIndex].getHP()) * statusRate);
+
+        Debug.Log("modifiedRate: " + modifiedRate);
+
+        //GEN VI
+        //int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Pow((255f/modifiedRate),0.1875f));
+        //GEN V
+        int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Sqrt(Mathf.Sqrt(255f / modifiedRate)));
+        return shakeProbability;
+    }
+
+    private int GetNumberOfShakes(int shakeProbability)
+    {
+        int shakes = 0;
+        string debugString = "";
+        for (int shake = 0; shake < 4; shake++)
+        {
+            int shakeCheck = Random.Range(0, 65535);
+            debugString += shake + ":(" + shakeCheck + "<" + shakeProbability + ")? ";
+            if (shakeCheck < shakeProbability)
+            {
+                debugString += "Pass.   ";
+                shakes += 1;
+            }
+            else
+            {
+                debugString += "Fail.   ";
+                shake = 4;
+            }
+        }
+        Debug.Log("(" + shakes + ")" + debugString);
+        return shakes;
     }
 
     /// Basic Wild Battle
@@ -4816,67 +4915,13 @@ public class BattleHandler : MonoBehaviour
                                 {
                                     //debug autoselect targetIndex (target selection not yet implemented)
                                     int targetIndex = 3;
-                                    //
+                                    yield return PokeballThrowAnimation(movingPokemon, trainerBattle);
 
-                                    //pokeball animation not yet implemented
-                                    yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
-                                        " used one " + commandItem[movingPokemon].getName() + "!", 2.4f));
-                                    yield return new WaitForSeconds(1.2f);
-                                    if (trainerBattle)
-                                    {
-                                        yield return
-                                            StartCoroutine(drawTextAndWait("The trainer blocked the ball!", 2.4f));
-                                        yield return StartCoroutine(drawTextAndWait("Don't be a theif!", 2.4f));
-                                    }
                                     //calculate catch chance
-                                    else
+                                    if (!trainerBattle)
                                     {
-                                        float ballRate = (float) commandItem[movingPokemon].getFloatParameter();
-                                        float catchRate =
-                                            (float)
-                                            PokemonDatabase.getPokemon(pokemon[targetIndex].getID()).getCatchRate();
-                                        float statusRate = 1f;
-                                        if ((pokemon[targetIndex].getStatus() != Pokemon.Status.NONE))
-                                        {
-                                            statusRate = (pokemon[targetIndex].getStatus() == Pokemon.Status.ASLEEP ||
-                                                          pokemon[targetIndex].getStatus() == Pokemon.Status.FROZEN)
-                                                ? 2.5f
-                                                : 1.5f;
-                                        }
-
-                                        int modifiedRate =
-                                            Mathf.FloorToInt(((3 * (float) pokemon[targetIndex].getHP() -
-                                                               2 * (float) pokemon[targetIndex].getCurrentHP())
-                                                              * catchRate * ballRate) /
-                                                             (3 * (float) pokemon[targetIndex].getHP()) * statusRate);
-
-                                        Debug.Log("modifiedRate: " + modifiedRate);
-
-                                        //GEN VI
-                                        //int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Pow((255f/modifiedRate),0.1875f));
-                                        //GEN V
-                                        int shakeProbability =
-                                            Mathf.FloorToInt(65536f / Mathf.Sqrt(Mathf.Sqrt(255f / modifiedRate)));
-
-                                        int shakes = 0;
-
-                                        string debugString = "";
-                                        for (int shake = 0; shake < 4; shake++)
-                                        {
-                                            int shakeCheck = Random.Range(0, 65535);
-                                            debugString += shake + ":(" + shakeCheck + "<" + shakeProbability + ")? ";
-                                            if (shakeCheck < shakeProbability)
-                                            {
-                                                debugString += "Pass.   ";
-                                                shakes += 1;
-                                            }
-                                            else
-                                            {
-                                                debugString += "Fail.   ";
-                                                shake = 4;
-                                            }
-                                        }
-                                        Debug.Log("(" + shakes + ")" + debugString);
+                                        int shakeProbability = GetShakeProbability(targetIndex, movingPokemon);
+                                        int shakes = GetNumberOfShakes(shakeProbability);
 
                                         if (shakes == 4)
                                         {
@@ -4884,48 +4929,21 @@ public class BattleHandler : MonoBehaviour
                                             running = false;
 
                                             //pokeball animation not yet implemented
-                                            yield return StartCoroutine(faintPokemonAnimation(opponent1));
-                                            yield return new WaitForSeconds(1f);
-
-                                            yield return
-                                                StartCoroutine(
-                                                    drawTextAndWait(
-                                                        generatePreString(targetIndex) + pokemon[targetIndex].getName() +
-                                                        " \\nwas caught!", 2.4f));
-
-                                            Dialog.DrawDialogBox();
-                                            yield return
-                                                StartCoroutine(
-                                                    Dialog.DrawTextSilent(
-                                                        "Would you like to give a nickname \\nto your new " +
-                                                        pokemon[targetIndex].getName() + "?"));
-                                            yield return StartCoroutine(Dialog.DrawChoiceBox());
+                                            yield return SuccessfulPokeballAnimation(targetIndex);
                                             int chosenIndex = Dialog.chosenIndex;
-                                            Dialog.UndrawDialogBox();
-                                            Dialog.UndrawChoiceBox();
+                                            Debug.Log(chosenIndex);
 
                                             string nickname = null;
                                             if (chosenIndex == 1)
                                             {
                                                 //give nickname
-                                                SfxHandler.Play(selectClip);
-                                                yield return StartCoroutine(ScreenFade.main.Fade(false, 0.4f));
-
-                                                Scene.main.Typing.gameObject.SetActive(true);
-                                                StartCoroutine(Scene.main.Typing.control(10, "",
-                                                    pokemon[targetIndex].getGender(), pokemon[targetIndex].GetIcons_()));
-                                                while (Scene.main.Typing.gameObject.activeSelf)
-                                                {
-                                                    yield return null;
-                                                }
+                                                yield return GiveNicknameAnimation(targetIndex);
                                                 if (Scene.main.Typing.typedString.Length > 0)
                                                 {
                                                     nickname = Scene.main.Typing.typedString;
                                                 }
-
-                                                yield return StartCoroutine(ScreenFade.main.Fade(true, 0.4f));
                                             }
-                                            Debug.Log("CurrentHP" + pokemon[targetIndex].getCurrentHP());
+                                            Debug.Log("CurrentHP: " + pokemon[targetIndex].getCurrentHP());
                                             SaveData.currentSave.PC.addPokemon(new Pokemon(pokemon[targetIndex],
                                                 nickname, commandItem[movingPokemon].getName()));
                                         }
