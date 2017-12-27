@@ -2233,7 +2233,6 @@ public class BattleHandler : MonoBehaviour
         }
     }
 
-
     private void setHPBarColor(Image bar, float maxSize)
     {
         if (bar.rectTransform.sizeDelta.x < maxSize / 4f)
@@ -3037,7 +3036,6 @@ public class BattleHandler : MonoBehaviour
         pokemonStats[4][position] = pokemon[position].getSPE();
     }
 
-
     /// Apply the Move Effect to the target pokemon if possible (with animation)
     private IEnumerator applyEffect(int attackerPosition, int targetPosition, MoveData.Effect effect, float parameter)
     {
@@ -3310,7 +3308,6 @@ public class BattleHandler : MonoBehaviour
         }
     }
 
-
     //////////////////////////////////
 
     //////////////////////////////////
@@ -3421,8 +3418,7 @@ public class BattleHandler : MonoBehaviour
             }
         }
     }
-
-
+    
     /// Display the a textbox with a message, and wait until Select or Start/Back is pressed.
     private IEnumerator drawTextAndWait(string message)
     {
@@ -3505,6 +3501,160 @@ public class BattleHandler : MonoBehaviour
         yield return new WaitForSeconds(PlayCry(pokemon));
     }
 
+    //////////////////////////////////
+    //
+    //  Helper Functions for Battle Controller
+    //
+    //////////////////////////////////
+
+    private IEnumerator AITurnSelection()
+    {
+        //AI not yet implemented properly.
+        //the following code randomly chooses a move to use with no further thought.
+        Debug.Log("AI Turn Attempted");
+        for (int i = 0; i < pokemonPerSide; i++)
+        {
+            //do for every pokemon on enemy side
+            int pi = i + 3;
+            if (pokemon[pi] != null)
+            {
+                //check if struggle is to be used (no PP left in any move)
+                if (pokemon[pi].getPP(0) == 0 && pokemon[pi].getPP(1) == 0 &&
+                    pokemon[pi].getPP(2) == 0 && pokemon[pi].getPP(3) == 0)
+                {
+                    commandMove[pi] = MoveDatabase.getMove("Struggle");
+                }
+                else
+                {
+                    //Randomly choose a move from the moveset
+                    int AImoveIndex = Random.Range(0, 4);
+                    while (pokemonMoveset[pi] != null && string.IsNullOrEmpty(pokemonMoveset[pi][AImoveIndex]) &&
+                           pokemon[pi].getPP(AImoveIndex) == 0)
+                    {
+                        AImoveIndex = Random.Range(0, 4);
+                    }
+                    command[pi] = CommandType.Move;
+                    commandMove[pi] = MoveDatabase.getMove(pokemonMoveset[pi][AImoveIndex]);
+                    Debug.Log(commandMove[pi].getName() + ", PP: " + pokemon[pi].getPP(AImoveIndex));
+                }
+            }
+        }
+
+
+        yield return new WaitForSeconds(0.3f);
+    }
+
+    private int[] initInitialLevels()
+    {   // Used after battle is finished to check for evolutions
+        int[] initialLevels = new int[6];
+        for (int i = 0; i < initialLevels.Length; i++)
+        {
+            if (SaveData.currentSave.PC.boxes[0][i] != null)
+            {
+                initialLevels[i] = SaveData.currentSave.PC.boxes[0][i].getLevel();
+            }
+        }
+        return initialLevels;
+    }
+
+    private IEnumerator AnimateBattleBegin(bool trainerBattle, Pokemon[] opponentParty, string opponentName)
+    {
+        if (trainerBattle)
+        {
+            StartCoroutine(ScreenFade.main.Fade(true, 1.2f));
+            StartCoroutine(slidePokemon(opponentBase, opponent1, false, false, new Vector3(100, 0, 0)));
+            StartCoroutine(slidePokemon(playerBase, player1, false, true, new Vector3(-80, -64, 0)));
+
+            yield return new WaitForSeconds(0.9f);
+            StartCoroutine(displayPartyBar(true, opponentParty));
+            StartCoroutine(displayPartyBar(false, SaveData.currentSave.PC.boxes[0]));
+
+            yield return StartCoroutine(drawTextAndWait(opponentName + " wants to fight!", 2.6f, 2.6f));
+
+            Dialog.DrawDialogBox();
+            StartCoroutine(Dialog.DrawTextSilent(opponentName + " sent out " + pokemon[3].getName() + "!"));
+            StartCoroutine(dismissPartyBar(true));
+            yield return StartCoroutine(slideTrainer(opponentBase, trainerSprite1, true, true));
+            yield return StartCoroutine(releasePokemon(opponent1));
+            PlayCry(pokemon[3]);
+            yield return new WaitForSeconds(0.3f);
+            yield return StartCoroutine(slidePokemonStats(3, false));
+            yield return new WaitForSeconds(0.9f);
+
+            Dialog.DrawDialogBox();
+            StartCoroutine(Dialog.DrawTextSilent("Go " + pokemon[0].getName() + "!"));
+            StartCoroutine(animatePlayerThrow(playerTrainerSprite1, playerTrainer1Animation, true));
+            yield return new WaitForSeconds(0.2f);
+            StartCoroutine(dismissPartyBar(false));
+            StartCoroutine(slideTrainer(playerBase, playerTrainerSprite1, false, true));
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(releasePokemon(player1));
+            PlayCry(pokemon[0]);
+            yield return new WaitForSeconds(0.3f);
+            yield return StartCoroutine(slidePokemonStats(0, false));
+            yield return new WaitForSeconds(0.9f);
+            Dialog.UndrawDialogBox();
+        }
+        else
+        {   // Wild Pokemon Battle
+            player1.transform.parent.parent.gameObject.SetActive(false);
+            opponent1.transform.parent.parent.gameObject.SetActive(false);
+
+            StartCoroutine(ScreenFade.main.Fade(true, ScreenFade.slowedSpeed));
+            StartCoroutine(slidePokemon(opponentBase, opponent1, true, false, new Vector3(92, 0, 0)));
+            yield return StartCoroutine(slidePokemon(playerBase, player1, false, true, new Vector3(-80, -64, 0)));
+            Dialog.DrawDialogBox();
+            StartCoroutine(Dialog.DrawTextSilent("A wild " + pokemon[3].getName() + " appeared!"));
+            PlayCry(pokemon[3]);
+            yield return StartCoroutine(slidePokemonStats(3, false));
+            yield return new WaitForSeconds(1.2f);
+
+            Dialog.DrawDialogBox();
+            StartCoroutine(Dialog.DrawTextSilent("Go " + pokemon[0].getName() + "!"));
+            StartCoroutine(animatePlayerThrow(playerTrainerSprite1, playerTrainer1Animation, true));
+            yield return new WaitForSeconds(0.2f);
+            StartCoroutine(slideTrainer(playerBase, playerTrainerSprite1, false, true));
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(releasePokemon(player1));
+            PlayCry(pokemon[0]);
+            yield return new WaitForSeconds(0.3f);
+            yield return StartCoroutine(slidePokemonStats(0, false));
+            yield return new WaitForSeconds(0.9f);
+            Dialog.UndrawDialogBox();
+        }
+        yield return new WaitForSeconds(.1f);
+    }
+
+    private bool UpdateRunningAfterFlee(int movingPokemon, int playerFleeAttempts)
+    {
+        Debug.Log(movingPokemon);
+        int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
+                                                 30 * playerFleeAttempts;
+        if (Random.Range(0, 256) < fleeChance)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private IEnumerator RunFromBattleAnimation(bool running)
+    { 
+        if (!running)
+        { 
+            SfxHandler.Play(runClip);
+            Dialog.DrawDialogBox();
+            yield return StartCoroutine(Dialog.DrawTextSilent("Got away safely!"));
+            while (!Input.GetButtonDown("Select") && !Input.GetButtonDown("Back"))
+            {
+                yield return null;
+            }
+            Dialog.UndrawDialogBox();
+        }
+        else
+        {
+            yield return StartCoroutine(drawTextAndWait("Can't escape!"));
+        }
+    }
 
     /// Basic Wild Battle
     public IEnumerator control(Pokemon wildPokemon)
@@ -3517,18 +3667,11 @@ public class BattleHandler : MonoBehaviour
     {
         yield return StartCoroutine(control(true, trainer, false));
     }
-
+        
     public IEnumerator control(bool isTrainerBattle, Trainer trainer, bool healedOnDefeat)
     {
         //Used to compare after the battle to check for evolutions.
-        int[] initialLevels = new int[6];
-        for (int i = 0; i < initialLevels.Length; i++)
-        {
-            if (SaveData.currentSave.PC.boxes[0][i] != null)
-            {
-                initialLevels[i] = SaveData.currentSave.PC.boxes[0][i].getLevel();
-            }
-        }
+        int[] initialLevels = initInitialLevels();
 
         trainerBattle = isTrainerBattle;
         Pokemon[] opponentParty = trainer.GetParty();
@@ -3627,75 +3770,11 @@ public class BattleHandler : MonoBehaviour
         hidePartyBar(true);
         hidePartyBar(false);
 
-//		Debug.Log(pokemon[0].getName()+": HP: "+pokemon[0].getHP()+"ATK: "+pokemon[0].getATK()+"DEF: "+pokemon[0].getDEF()+"SPA: "+pokemon[0].getSPA()+"SPD: "+pokemon[0].getSPD()+"SPE:"+pokemon[0].getSPE());
-//		Debug.Log(pokemon[3].getName()+": HP: "+pokemon[3].getHP()+"ATK: "+pokemon[3].getATK()+"DEF: "+pokemon[3].getDEF()+"SPA: "+pokemon[3].getSPA()+"SPD: "+pokemon[3].getSPD()+"SPE:"+pokemon[3].getSPE());
+        //		Debug.Log(pokemon[0].getName()+": HP: "+pokemon[0].getHP()+"ATK: "+pokemon[0].getATK()+"DEF: "+pokemon[0].getDEF()+"SPA: "+pokemon[0].getSPA()+"SPD: "+pokemon[0].getSPD()+"SPE:"+pokemon[0].getSPE());
+        //		Debug.Log(pokemon[3].getName()+": HP: "+pokemon[3].getHP()+"ATK: "+pokemon[3].getATK()+"DEF: "+pokemon[3].getDEF()+"SPA: "+pokemon[3].getSPA()+"SPD: "+pokemon[3].getSPD()+"SPE:"+pokemon[3].getSPE());
 
-
-        if (trainerBattle)
-        {
-            StartCoroutine(ScreenFade.main.Fade(true, 1.2f));
-            StartCoroutine(slidePokemon(opponentBase, opponent1, false, false, new Vector3(100, 0, 0)));
-            StartCoroutine(slidePokemon(playerBase, player1, false, true, new Vector3(-80, -64, 0)));
-
-            yield return new WaitForSeconds(0.9f);
-            StartCoroutine(displayPartyBar(true, opponentParty));
-            StartCoroutine(displayPartyBar(false, SaveData.currentSave.PC.boxes[0]));
-
-            yield return StartCoroutine(drawTextAndWait(opponentName + " wants to fight!", 2.6f, 2.6f));
-
-            Dialog.DrawDialogBox();
-            StartCoroutine(Dialog.DrawTextSilent(opponentName + " sent out " + pokemon[3].getName() + "!"));
-            StartCoroutine(dismissPartyBar(true));
-            yield return StartCoroutine(slideTrainer(opponentBase, trainerSprite1, true, true));
-            yield return StartCoroutine(releasePokemon(opponent1));
-            PlayCry(pokemon[3]);
-            yield return new WaitForSeconds(0.3f);
-            yield return StartCoroutine(slidePokemonStats(3, false));
-            yield return new WaitForSeconds(0.9f);
-
-            Dialog.DrawDialogBox();
-            StartCoroutine(Dialog.DrawTextSilent("Go " + pokemon[0].getName() + "!"));
-            StartCoroutine(animatePlayerThrow(playerTrainerSprite1, playerTrainer1Animation, true));
-            yield return new WaitForSeconds(0.2f);
-            StartCoroutine(dismissPartyBar(false));
-            StartCoroutine(slideTrainer(playerBase, playerTrainerSprite1, false, true));
-            yield return new WaitForSeconds(0.5f);
-            yield return StartCoroutine(releasePokemon(player1));
-            PlayCry(pokemon[0]);
-            yield return new WaitForSeconds(0.3f);
-            yield return StartCoroutine(slidePokemonStats(0, false));
-            yield return new WaitForSeconds(0.9f);
-            Dialog.UndrawDialogBox();
-        }
-        else
-        {
-            player1.transform.parent.parent.gameObject.SetActive(false);
-            opponent1.transform.parent.parent.gameObject.SetActive(false);
-
-            StartCoroutine(ScreenFade.main.Fade(true, ScreenFade.slowedSpeed));
-            StartCoroutine(slidePokemon(opponentBase, opponent1, true, false, new Vector3(92, 0, 0)));
-            yield return StartCoroutine(slidePokemon(playerBase, player1, false, true, new Vector3(-80, -64, 0)));
-            Dialog.DrawDialogBox();
-            StartCoroutine(Dialog.DrawTextSilent("A wild " + pokemon[3].getName() + " appeared!"));
-            PlayCry(pokemon[3]);
-            yield return StartCoroutine(slidePokemonStats(3, false));
-            yield return new WaitForSeconds(1.2f);
-
-            Dialog.DrawDialogBox();
-            StartCoroutine(Dialog.DrawTextSilent("Go " + pokemon[0].getName() + "!"));
-            StartCoroutine(animatePlayerThrow(playerTrainerSprite1, playerTrainer1Animation, true));
-            yield return new WaitForSeconds(0.2f);
-            StartCoroutine(slideTrainer(playerBase, playerTrainerSprite1, false, true));
-            yield return new WaitForSeconds(0.5f);
-            yield return StartCoroutine(releasePokemon(player1));
-            PlayCry(pokemon[0]);
-            yield return new WaitForSeconds(0.3f);
-            yield return StartCoroutine(slidePokemonStats(0, false));
-            yield return new WaitForSeconds(0.9f);
-            Dialog.UndrawDialogBox();
-        }
-        //
-
+        /// Animate the opening sequence of Pokemon Battle
+        yield return StartCoroutine(AnimateBattleBegin(trainerBattle, opponentParty, opponentName));
 
         updateCurrentTask(0);
 
@@ -4694,43 +4773,11 @@ public class BattleHandler : MonoBehaviour
                 yield return null;
             }
 
-
             ////////////////////////////////////////
             /// AI turn selection
             ////////////////////////////////////////
 
-            //AI not yet implemented properly.
-            //the following code randomly chooses a move to use with no further thought.
-            for (int i = 0; i < pokemonPerSide; i++)
-            {
-                //do for every pokemon on enemy side
-                int pi = i + 3;
-                if (pokemon[pi] != null)
-                {
-                    //check if struggle is to be used (no PP left in any move)
-                    if (pokemon[pi].getPP(0) == 0 && pokemon[pi].getPP(1) == 0 &&
-                        pokemon[pi].getPP(2) == 0 && pokemon[pi].getPP(3) == 0)
-                    {
-                        commandMove[pi] = MoveDatabase.getMove("Struggle");
-                    }
-                    else
-                    {
-                        //Randomly choose a move from the moveset
-                        int AImoveIndex = Random.Range(0, 4);
-                        while (pokemonMoveset[pi] != null && string.IsNullOrEmpty(pokemonMoveset[pi][AImoveIndex]) &&
-                               pokemon[pi].getPP(AImoveIndex) == 0)
-                        {
-                            AImoveIndex = Random.Range(0, 4);
-                        }
-                        command[pi] = CommandType.Move;
-                        commandMove[pi] = MoveDatabase.getMove(pokemonMoveset[pi][AImoveIndex]);
-                        Debug.Log(commandMove[pi].getName() + ", PP: " + pokemon[pi].getPP(AImoveIndex));
-                    }
-                }
-            }
-
-
-            yield return new WaitForSeconds(0.3f);
+            yield return AITurnSelection();
 
             ////////////////////////////////////////
             /// Battle State
@@ -4753,28 +4800,9 @@ public class BattleHandler : MonoBehaviour
                             {
                                 //player attemps escape
                                 playerFleeAttempts += 1;
-
-                                int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
-                                                 30 * playerFleeAttempts;
-                                if (Random.Range(0, 256) < fleeChance)
-                                {
-                                    running = false;
-
-                                    SfxHandler.Play(runClip);
-                                    Dialog.DrawDialogBox();
-                                    yield return StartCoroutine(Dialog.DrawTextSilent("Got away safely!"));
-                                    while (!Input.GetButtonDown("Select") && !Input.GetButtonDown("Back"))
-                                    {
-                                        yield return null;
-                                    }
-                                    Dialog.UndrawDialogBox();
-                                }
-                                else
-                                {
-                                    yield return StartCoroutine(drawTextAndWait("Can't escape!"));
-                                }
+                                running = UpdateRunningAfterFlee(movingPokemon, playerFleeAttempts);
+                                yield return RunFromBattleAnimation(running);
                             }
-
                             pokemonHasMoved[movingPokemon] = true;
                         }
                         else if (command[movingPokemon] == CommandType.Item)
@@ -4791,11 +4819,8 @@ public class BattleHandler : MonoBehaviour
                                     //
 
                                     //pokeball animation not yet implemented
-                                    yield return
-                                        StartCoroutine(
-                                            drawTextAndWait(
-                                                SaveData.currentSave.playerName + " used one " +
-                                                commandItem[movingPokemon].getName() + "!", 2.4f));
+                                    yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
+                                        " used one " + commandItem[movingPokemon].getName() + "!", 2.4f));
                                     yield return new WaitForSeconds(1.2f);
                                     if (trainerBattle)
                                     {
@@ -5244,11 +5269,8 @@ public class BattleHandler : MonoBehaviour
                                     if (pokemon[targetIndex].getStatus() == Pokemon.Status.FAINTED)
                                     {
                                         //debug = array of GUITextures not yet implemented
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
-                                                    generatePreString(targetIndex) + pokemon[targetIndex].getName() +
-                                                    " fainted!", 2.4f));
+                                        yield return StartCoroutine(drawTextAndWait(generatePreString(targetIndex) + 
+                                            pokemon[targetIndex].getName() + " fainted!", 2.4f));
                                         Dialog.UndrawDialogBox();
                                         yield return new WaitForSeconds(0.2f);
                                         yield return new WaitForSeconds(PlayCry(pokemon[targetIndex]));
