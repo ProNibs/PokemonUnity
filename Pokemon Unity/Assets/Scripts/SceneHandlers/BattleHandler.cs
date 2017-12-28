@@ -4047,6 +4047,18 @@ public class BattleHandler : MonoBehaviour
         /// Animate the opening sequence of Pokemon Battle
         yield return StartCoroutine(AnimateBattleBegin(trainerBattle, opponentParty, opponentName));
 
+        // Before updating task, check for on-switch effects
+        // A Pokemon.getAbility()
+        //pokemonStatsMod[3]
+        yield return drawTextAndWait(
+                generatePreString(0) + pokemon[0].getName() +
+                " used " + pokemon[0].getAbilityName() + "!", 0.25f, 0.5f);
+        yield return animateOverlayer(opponent1Overlay, overlayStatDownTex, 1f, 0, 1.2f, 0.3f);
+        Debug.Log(AbilityDatabase.getAbilityDescription(pokemon[0].getAbilityName()));
+
+        yield return new WaitForSeconds(0.25f);
+        Dialog.UndrawDialogBox();
+
         updateCurrentTask(0);
 
         int playerFleeAttempts = 0;
@@ -4067,6 +4079,7 @@ public class BattleHandler : MonoBehaviour
                 updateMovesetDisplay(pokemonMoveset[0], pokemon[0].getPP(), pokemon[0].getMaxPP());
             }
 
+            
             updatePokemonStatsDisplay(0);
             updatePokemonStatsDisplay(3);
             updateCurrentTask(0);
@@ -4074,6 +4087,7 @@ public class BattleHandler : MonoBehaviour
             //		Debug.Log(pokemon[0].getName()+": HP: "+pokemon[0].getHP()+"ATK: "+pokemon[0].getATK()+"DEF: "+pokemon[0].getDEF()+"SPA: "+pokemon[0].getSPA()+"SPD: "+pokemon[0].getSPD()+"SPE:"+pokemon[0].getSPE());
             //		Debug.Log(pokemon[3].getName()+": HP: "+pokemon[3].getHP()+"ATK: "+pokemon[3].getATK()+"DEF: "+pokemon[3].getDEF()+"SPA: "+pokemon[3].getSPA()+"SPD: "+pokemon[3].getSPD()+"SPE:"+pokemon[3].getSPE());
 
+            
             ////////////////////////////////////////
             /// Task Selection State
             ////////////////////////////////////////
@@ -5126,13 +5140,10 @@ public class BattleHandler : MonoBehaviour
                                     if (commandTarget[movingPokemon] < 3)
                                     {
                                         //if target is player
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     SaveData.currentSave.playerName + " used the " +
                                                     commandItem[movingPokemon].getName() + "!", 2.4f));
-                                        yield return
-                                            StartCoroutine(Heal(commandTarget[movingPokemon],
+                                        yield return StartCoroutine(Heal(commandTarget[movingPokemon],
                                                 commandItem[movingPokemon].getFloatParameter()));
                                     }
                                 }
@@ -5195,9 +5206,7 @@ public class BattleHandler : MonoBehaviour
                                 {
                                     if (Random.value > 0.75f)
                                     {
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     " is paralyzed! \\nIt can't move!", 2.4f));
                                         canMove = false;
@@ -5207,9 +5216,7 @@ public class BattleHandler : MonoBehaviour
                                 {
                                     if (Random.value > 0.2f)
                                     {
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     " is \\nfrozen solid!", 2.4f));
                                         canMove = false;
@@ -5219,8 +5226,7 @@ public class BattleHandler : MonoBehaviour
                                         pokemon[movingPokemon].setStatus(Pokemon.Status.NONE);
                                         updatePokemonStatsDisplay(movingPokemon);
                                         yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                            StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     " thawed out!", 2.4f));
                                     }
@@ -5230,9 +5236,7 @@ public class BattleHandler : MonoBehaviour
                                     pokemon[movingPokemon].removeSleepTurn();
                                     if (pokemon[movingPokemon].getStatus() == Pokemon.Status.ASLEEP)
                                     {
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     " is \\nfast asleep.", 2.4f));
                                         canMove = false;
@@ -5240,9 +5244,7 @@ public class BattleHandler : MonoBehaviour
                                     else
                                     {
                                         updatePokemonStatsDisplay(movingPokemon);
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     " woke up!", 2.4f));
                                     }
@@ -5252,9 +5254,7 @@ public class BattleHandler : MonoBehaviour
                                     //use the move
                                     //deduct PP from the move
                                     pokemon[movingPokemon].removePP(commandMove[movingPokemon].getName(), 1);
-                                    yield return
-                                        StartCoroutine(
-                                            drawTextAndWait(
+                                    yield return StartCoroutine(drawTextAndWait( 
                                                 generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                 " used " + commandMove[movingPokemon].getName() + "!", 1.2f, 1.2f));
 
@@ -5262,9 +5262,7 @@ public class BattleHandler : MonoBehaviour
                                     if (accuracy != 0 && Random.value > accuracy)
                                     {
                                         //if missed, provide missed feedback
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
                                                     "'s attack missed!", 2.4f));
                                         canMove = false;

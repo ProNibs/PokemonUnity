@@ -67,30 +67,35 @@ public class AbilityData
     private bool OutOfBattleEffect; // If true, has out of battle effects
     private Target target;
     private Target target2;     // Only used when the target reqires another target's threshold
+    private Action action;
     private float actionNumber;     // Could be percentage chance for effect, could be threshold
                         // Could indicate what to do for specific cases
     private string description;
     
 
     // For single targetted Abilities
-    public AbilityData(string name, BattleOccurance battleOccurance,bool OutofBattleEffect, 
-        Target target1, string description)
+    public AbilityData(string name, BattleOccurance battleOccurance,bool OutOfBattleEffect, 
+        Target target1, Action action, float actionNumber, string description)
     {
         this.name = name;
         this.battleOccurance = battleOccurance;
         this.OutOfBattleEffect = OutOfBattleEffect;
         this.target = target1;
+        this.action = action;
+        this.actionNumber = actionNumber;
         this.description = description;
     }
 
-    public AbilityData(string name, BattleOccurance battleOccurance, bool OutofBattleEffect,
-        Target target1, Target target2, string description)
+    public AbilityData(string name, BattleOccurance battleOccurance, bool OutOfBattleEffect,
+        Target target1, Target target2, Action action, float actionNumber, string description)
     {
         this.name = name;
         this.battleOccurance = battleOccurance;
         this.OutOfBattleEffect = OutOfBattleEffect;
         this.target = target1;
         this.target2 = target2;
+        this.action = action;
+        this.actionNumber = actionNumber;
         this.description = description;
     }
 
@@ -113,6 +118,7 @@ public class AbilityData
     {
         return target;
     }
+
     public string getDescription()
     {
         return description;

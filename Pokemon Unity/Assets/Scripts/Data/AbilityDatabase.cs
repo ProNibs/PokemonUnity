@@ -7,13 +7,13 @@ public class AbilityDatabase
     private static AbilityData[] ability = new AbilityData[]
     {
         new AbilityData("Null", AbilityData.BattleOccurance.OTHER, false, Target.SELF,
-            "A very false Description"),
+            AbilityData.Action.ATK_MODIFY, 0.0f,"A very false Description"),
         new AbilityData("Intimidate", AbilityData.BattleOccurance.ON_ENTRY, false, Target.ALLOPPONENT,
-            "RAWR, I INTIMIDATE YOU!"),
+            AbilityData.Action.ATK_MODIFY, -1.0f, "RAWR, I INTIMIDATE YOU!"),
         new AbilityData("Synchronize", AbilityData.BattleOccurance.MOVE_HITTING, false, Target.SELF,
-            "A description of Synchronize"),
+            AbilityData.Action.ATK_MODIFY, 0.0f,"A description of Synchronize"),
         new AbilityData("String2", AbilityData.BattleOccurance.MOVE_HITTING, true, Target.ALL,
-            "A false Description")
+           AbilityData.Action.ATK_MODIFY, 0.0f, "A false Description")
     };
 
 

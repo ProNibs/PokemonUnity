@@ -102,6 +102,7 @@ public class Pokemon
 
     private int ability; //(0/1/2(hiddenability)) if higher than number of abilites, rounds down to nearest ability.
     // if is 2, but pokemon only has 1 ability and no hidden, will use the one ability it does have.
+    private string abilityName;
 
     private string[] moveset;
     private string[] moveHistory;
@@ -168,6 +169,7 @@ public class Pokemon
         //set currentHP to HP, as a new pokemon will be undamaged.
         this.currentHP = HP;
         this.ability = ability;
+        this.abilityName = thisPokemonData.getAbility(this.ability);
 
         this.moveset = moveset;
         this.moveHistory = moveset;
@@ -258,6 +260,7 @@ public class Pokemon
         {
             this.ability = ability;
         }
+        this.abilityName = thisPokemonData.getAbility(this.ability);
 
         //Set moveset based off of the highest level moves possible.
         this.moveset = thisPokemonData.GenerateMoveset(this.level);
@@ -281,7 +284,7 @@ public class Pokemon
     //adding a caught pokemon (only a few customizable details)
     public Pokemon(Pokemon pokemon, string nickname, string caughtBall)
     {
-        //PokemonData thisPokemonData = PokemonDatabase.getPokemon(pokemon.pokemonID);
+        PokemonData thisPokemonData = PokemonDatabase.getPokemon(pokemon.pokemonID);
 
         this.pokemonID = pokemon.pokemonID;
         this.nickname = nickname;
@@ -339,6 +342,7 @@ public class Pokemon
         this.currentHP = pokemon.currentHP;
 
         this.ability = pokemon.ability;
+        this.abilityName = thisPokemonData.getAbility(this.ability);
 
         this.moveset = pokemon.moveset;
         this.moveHistory = pokemon.moveHistory;
@@ -947,7 +951,6 @@ public class Pokemon
         }
     }
 
-
     public void removePP(string move, float amount)
     {
         removePP(getMoveIndex(move), amount);
@@ -965,7 +968,6 @@ public class Pokemon
             }
         }
     }
-
 
     public bool setStatus(Status status)
     {
@@ -991,7 +993,6 @@ public class Pokemon
         return false;
     }
 
-
     public void removeSleepTurn()
     {
         if (status == Status.ASLEEP)
@@ -1008,7 +1009,6 @@ public class Pokemon
     {
         return sleepTurns;
     }
-
 
     public string getFirstFEInstance(string moveName)
     {
@@ -1312,6 +1312,10 @@ public class Pokemon
         return ability;
     }
 
+    public string getAbilityName()
+    {
+        return abilityName;
+    }
     public int getMoveIndex(string move)
     {
         for (int i = 0; i < moveset.Length; i++)
