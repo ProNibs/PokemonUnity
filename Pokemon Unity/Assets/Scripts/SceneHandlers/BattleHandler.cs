@@ -4009,7 +4009,7 @@ public class BattleHandler : MonoBehaviour
                 if (SaveData.currentSave.PC.boxes[0][i].getStatus() != Pokemon.Status.FAINTED)
                 {
                     switchPokemon(0, SaveData.currentSave.PC.boxes[0][i], false, true);
-                    i = 6;
+                    break;
                 }
             }
         }
