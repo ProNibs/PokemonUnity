@@ -1230,7 +1230,7 @@ public class PlayerMovement : MonoBehaviour
                     yield return StartCoroutine(ScreenFade.main.FadeCutout(false, ScreenFade.slowedSpeed, null));
                     //yield return new WaitForSeconds(sceneTransition.FadeOut(1f));
                     Scene.main.Battle.gameObject.SetActive(true);
-                    StartCoroutine(Scene.main.Battle.control(accessedMapSettings.getRandomEncounter(encounterLocation)));
+                    yield return StartCoroutine(Scene.main.Battle.control(accessedMapSettings.getRandomEncounter(encounterLocation)));
 
                     while (Scene.main.Battle.gameObject.activeSelf)
                     {
