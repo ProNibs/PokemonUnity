@@ -2233,7 +2233,6 @@ public class BattleHandler : MonoBehaviour
         }
     }
 
-
     private void setHPBarColor(Image bar, float maxSize)
     {
         if (bar.rectTransform.sizeDelta.x < maxSize / 4f)
@@ -3037,7 +3036,6 @@ public class BattleHandler : MonoBehaviour
         pokemonStats[4][position] = pokemon[position].getSPE();
     }
 
-
     /// Apply the Move Effect to the target pokemon if possible (with animation)
     private IEnumerator applyEffect(int attackerPosition, int targetPosition, MoveData.Effect effect, float parameter)
     {
@@ -3310,7 +3308,6 @@ public class BattleHandler : MonoBehaviour
         }
     }
 
-
     //////////////////////////////////
 
     //////////////////////////////////
@@ -3421,8 +3418,7 @@ public class BattleHandler : MonoBehaviour
             }
         }
     }
-
-
+    
     /// Display the a textbox with a message, and wait until Select or Start/Back is pressed.
     private IEnumerator drawTextAndWait(string message)
     {
@@ -3505,22 +3501,15 @@ public class BattleHandler : MonoBehaviour
         yield return new WaitForSeconds(PlayCry(pokemon));
     }
 
-
-    /// Basic Wild Battle
-    public IEnumerator control(Pokemon wildPokemon)
-    {
-        yield return StartCoroutine(control(false, new Trainer(new Pokemon[] {wildPokemon}), false));
-    }
-
-    /// Basic Trainer Battle
-    public IEnumerator control(Trainer trainer)
-    {
-        yield return StartCoroutine(control(true, trainer, false));
-    }
-
-    public IEnumerator control(bool isTrainerBattle, Trainer trainer, bool healedOnDefeat)
-    {
-        //Used to compare after the battle to check for evolutions.
+    //////////////////////////////////
+    //
+    //  Helper Functions for Battle Controller
+    //
+    /////////////////////////////////
+#region
+    #region
+    private int[] initInitialLevels()
+    {   // Used after battle is finished to check for evolutions
         int[] initialLevels = new int[6];
         for (int i = 0; i < initialLevels.Length; i++)
         {
@@ -3529,108 +3518,249 @@ public class BattleHandler : MonoBehaviour
                 initialLevels[i] = SaveData.currentSave.PC.boxes[0][i].getLevel();
             }
         }
+        return initialLevels;
+    }
 
-        trainerBattle = isTrainerBattle;
-        Pokemon[] opponentParty = trainer.GetParty();
-        string opponentName = trainer.GetName();
-
-        //GET BATTLE BACKGROUNDS
-        int currentTileTag = PlayerMovement.player.currentMap.getTileTag(PlayerMovement.player.transform.position);
-        Debug.Log(currentTileTag);
-        background.sprite = PlayerMovement.player.accessedMapSettings.getBattleBackground(currentTileTag);
-
-        playerBase.sprite = PlayerMovement.player.accessedMapSettings.getBattleBase(currentTileTag);
-        opponentBase.sprite = playerBase.sprite;
-
-
-        //Set Trainer Sprites
-        trainer1Animation = new Sprite[] {Resources.Load<Sprite>("null")};
-        if (trainerBattle)
+    private bool UpdateRunningAfterFlee(int movingPokemon, int playerFleeAttempts)
+    {
+        int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
+                                                 30 * playerFleeAttempts;
+        if (Random.Range(0, 256) < fleeChance)
         {
-            trainer1Animation = trainer.GetSprites();
+            return false;
         }
-        playerTrainer1Animation =
-            Resources.LoadAll<Sprite>("PlayerSprites/" + SaveData.currentSave.getPlayerSpritePrefix() + "back");
-        playerTrainerSprite1.sprite = playerTrainer1Animation[0];
-        //Note: the player animation should NEVER have no sprites 
-        if (trainer1Animation.Length > 0)
+        return true;
+    }
+
+    private IEnumerator AITurnSelection()
+    {
+        //AI not yet implemented properly.
+        //the following code randomly chooses a move to use with no further thought.
+        for (int i = 0; i < pokemonPerSide; i++)
         {
-            trainerSprite1.sprite = trainer1Animation[0];
-        }
-        else
-        {
-            trainerSprite1.sprite = Resources.Load<Sprite>("null");
-        }
-        //Set trainer sprites to the center of the platform initially
-        playerTrainerSprite1.rectTransform.localPosition = new Vector3(0,
-            playerTrainerSprite1.rectTransform.localPosition.y, 0);
-        trainerSprite1.rectTransform.localPosition = new Vector3(0, trainerSprite1.rectTransform.localPosition.y, 0);
-
-
-        victor = -1; //0 = player, 1 = opponent, 2 = tie
-
-        //Reset position variables
-        currentTask = 0;
-        taskPosition = 1;
-        movePosition = 1;
-        bagCategoryPosition = 0;
-        pokePartyPosition = 0;
-        itemListPagePosition = 0;
-        itemListPageCount = 0;
-
-        updateCurrentTask(-1);
-        updateSelectedTask(1);
-        updateSelectedMove(1);
-
-
-        bool running = true;
-        bool runState = true;
-
-        for (int i = 0; i < 6; i++)
-        {
-            if (SaveData.currentSave.PC.boxes[0][i] != null)
+            //do for every pokemon on enemy side
+            int pi = i + 3;
+            if (pokemon[pi] != null)
             {
-                if (SaveData.currentSave.PC.boxes[0][i].getStatus() != Pokemon.Status.FAINTED)
+                //check if struggle is to be used (no PP left in any move)
+                if (pokemon[pi].getPP(0) == 0 && pokemon[pi].getPP(1) == 0 &&
+                    pokemon[pi].getPP(2) == 0 && pokemon[pi].getPP(3) == 0)
                 {
-                    switchPokemon(0, SaveData.currentSave.PC.boxes[0][i], false, true);
-                    i = 6;
+                    commandMove[pi] = MoveDatabase.getMove("Struggle");
+                }
+                else
+                {
+                    //Randomly choose a move from the moveset
+                    int AImoveIndex = Random.Range(0, 4);
+                    while (pokemonMoveset[pi] != null && string.IsNullOrEmpty(pokemonMoveset[pi][AImoveIndex]) &&
+                           pokemon[pi].getPP(AImoveIndex) == 0)
+                    {
+                        AImoveIndex = Random.Range(0, 4);
+                    }
+                    command[pi] = CommandType.Move;
+                    commandMove[pi] = MoveDatabase.getMove(pokemonMoveset[pi][AImoveIndex]);
+                    Debug.Log(commandMove[pi].getName() + ", PP: " + pokemon[pi].getPP(AImoveIndex));
                 }
             }
         }
-        switchPokemon(3, opponentParty[0], false, true);
 
 
-        player1Animation = pokemon[0].GetBackAnim_();
-        opponent1Animation = pokemon[3].GetFrontAnim_();
+        yield return new WaitForSeconds(0.3f);
+    }
 
-        updatePokemonStatsDisplay(0);
-        updatePokemonStatsDisplay(3);
+   #endregion
 
-        if (pokemon[0] != null)
+    ////////////
+    // Pokeball Related Functions
+    ///////////
+    #region
+    private IEnumerator PokeballThrowAnimation(int movingPokemon, bool trainerBattle)
+    {
+        //pokeball animation not yet implemented
+        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
+            " used one " + commandItem[movingPokemon].getName() + "!", 2.4f));
+        yield return new WaitForSeconds(1.2f);
+        if (trainerBattle)
         {
-            updateMovesetDisplay(pokemonMoveset[0], pokemon[0].getPP(), pokemon[0].getMaxPP());
+            yield return StartCoroutine(drawTextAndWait("The trainer blocked the ball!", 2.4f));
+            yield return StartCoroutine(drawTextAndWait("Don't be a theif!", 2.4f));
+        }
+    }
+
+    private IEnumerator SuccessfulPokeballAnimation(int targetIndex)
+    {
+       //pokeball animation not yet implemented
+        yield return StartCoroutine(faintPokemonAnimation(opponent1));
+        yield return new WaitForSeconds(1f);
+
+        yield return StartCoroutine(drawTextAndWait(
+                generatePreString(targetIndex) + pokemon[targetIndex].getName() +
+                " \\nwas caught!", 2.4f));
+
+        Dialog.DrawDialogBox();
+        yield return StartCoroutine(Dialog.DrawTextSilent(
+                "Would you like to give a nickname \\nto your new " +
+                pokemon[targetIndex].getName() + "?"));
+        yield return StartCoroutine(Dialog.DrawChoiceBox());
+        Dialog.UndrawDialogBox();
+        Dialog.UndrawChoiceBox();
+    }
+
+    private IEnumerator GiveNicknameAnimation(int targetIndex)
+    {
+        SfxHandler.Play(selectClip);
+        yield return StartCoroutine(ScreenFade.main.Fade(false, 0.4f));
+
+        Scene.main.Typing.gameObject.SetActive(true);
+        StartCoroutine(Scene.main.Typing.control(10, "",
+            pokemon[targetIndex].getGender(), pokemon[targetIndex].GetIcons_()));
+        while (Scene.main.Typing.gameObject.activeSelf)
+        {
+            yield return null;
+        }
+        yield return StartCoroutine(ScreenFade.main.Fade(true, 0.4f));
+    }
+
+    private int GetShakeProbability(int targetIndex, int movingPokemon)
+    {
+        float ballRate = (float)commandItem[movingPokemon].getFloatParameter();
+        float catchRate = (float)PokemonDatabase.getPokemon(pokemon[targetIndex].getID()).getCatchRate();
+        float statusRate = 1f;
+        if ((pokemon[targetIndex].getStatus() != Pokemon.Status.NONE))
+        {
+            statusRate = (pokemon[targetIndex].getStatus() == Pokemon.Status.ASLEEP ||
+                          pokemon[targetIndex].getStatus() == Pokemon.Status.FROZEN)
+                ? 2.5f
+                : 1.5f;
         }
 
-        //Animate the Pokemon being released into battle
-        player1.transform.parent.parent.gameObject.SetActive(false);
-        opponent1.transform.parent.parent.gameObject.SetActive(false);
-        player1Overlay.gameObject.SetActive(false);
-        opponent1Overlay.gameObject.SetActive(false);
+        int modifiedRate = Mathf.FloorToInt(((3 * (float)pokemon[targetIndex].getHP() -
+            2 * (float)pokemon[targetIndex].getCurrentHP())
+            * catchRate * ballRate) / (3 * (float)pokemon[targetIndex].getHP()) * statusRate);
 
+        Debug.Log("modifiedRate: " + modifiedRate);
 
-        animateOpponent1 = StartCoroutine(animatePokemon(opponent1, opponent1Animation));
-        animatePlayer1 = StartCoroutine(animatePokemon(player1, player1Animation));
+        //GEN VI
+        //int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Pow((255f/modifiedRate),0.1875f));
+        //GEN V
+        int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Sqrt(Mathf.Sqrt(255f / modifiedRate)));
+        return shakeProbability;
+    }
 
-        pokemonStatsDisplay[0].gameObject.SetActive(false);
-        pokemonStatsDisplay[3].gameObject.SetActive(false);
+    private int GetNumberOfShakes(int shakeProbability)
+    {
+        int shakes = 0;
+        string debugString = "";
+        for (int shake = 0; shake < 4; shake++)
+        {
+            int shakeCheck = Random.Range(0, 65535);
+            debugString += shake + ":(" + shakeCheck + "<" + shakeProbability + ")? ";
+            if (shakeCheck < shakeProbability)
+            {
+                debugString += "Pass.   ";
+                shakes += 1;
+            }
+            else
+            {
+                debugString += "Fail.   ";
+                shake = 4;
+            }
+        }
+        Debug.Log("(" + shakes + ")" + debugString);
+        return shakes;
+    }
+    #endregion
 
-        hidePartyBar(true);
-        hidePartyBar(false);
+    ///////////
+    //  Damage Helper Functions
+    ///////////
+    #region
+    private float SuperEffectiveModifier(int movingPokemon, int targetIndex)
+    {
+        float superEffectiveModifier =
+            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
+                pokemonType1[targetIndex]) *
+            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
+                pokemonType2[targetIndex]) *
+            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
+                pokemonType3[targetIndex]);
+        return superEffectiveModifier;
+    }
 
-//		Debug.Log(pokemon[0].getName()+": HP: "+pokemon[0].getHP()+"ATK: "+pokemon[0].getATK()+"DEF: "+pokemon[0].getDEF()+"SPA: "+pokemon[0].getSPA()+"SPD: "+pokemon[0].getSPD()+"SPE:"+pokemon[0].getSPE());
-//		Debug.Log(pokemon[3].getName()+": HP: "+pokemon[3].getHP()+"ATK: "+pokemon[3].getATK()+"DEF: "+pokemon[3].getDEF()+"SPA: "+pokemon[3].getSPA()+"SPD: "+pokemon[3].getSPD()+"SPE:"+pokemon[3].getSPE());
+    private float ApplyCritical(int i, int movingPokemon, int targetIndex)
+    {
+        float damageToDeal = 1f;    // Set base modifier value
+        if (pokemonStatsMod[i][movingPokemon] > 0)
+        {   // Only apply is Offensive stat is positive
+            damageToDeal *= calculateStatModifier(pokemonStatsMod[i][movingPokemon]);
+        }
+        if (pokemonStatsMod[i + 1][targetIndex] < 0)
+        {   //only apply Defensive stat is negative
+            damageToDeal *= calculateStatModifier(pokemonStatsMod[i + 1][targetIndex]);
+        }
+        return damageToDeal;    
+    }
+     
+    private float ApplyStatBoosts(bool applyCritical, int movingPokemon, int targetIndex)
+    {
+        float damageToDeal = 1f;    // Set base modifier value
+        int i = 0;      // [ATKmod, DEFmod, SPAmod, SPDmod] index
+        MoveData.Category damageType = commandMove[movingPokemon].getCategory();
+        switch (damageType)
+        {
+            case MoveData.Category.PHYSICAL:
+                i = 0;
+                break;
+            case MoveData.Category.SPECIAL:
+                i = 2;
+                break;
+            default:
+                break;
+        }
+        if (applyCritical)
+        {
+            damageToDeal *= ApplyCritical(i, movingPokemon, targetIndex);
+        }
+        else
+        {
+            damageToDeal *= calculateStatModifier(pokemonStatsMod[i][movingPokemon]);
+            damageToDeal /= calculateStatModifier(pokemonStatsMod[i+1][targetIndex]);
+            // Should move getting BURNED to be a Stat mod instead
+            if ((pokemon[movingPokemon].getStatus() == Pokemon.Status.BURNED)&&(i==0))
+            {
+                damageToDeal /= 2f;
+            }
+        }
+        return damageToDeal;
+    }
 
+    private bool CheckEffects(bool ForSelf, int i2, MoveData.Effect[] moveEffects)
+    {
+        bool isTrue = false;
+        if (ForSelf)
+        {
+            isTrue = (moveEffects[i2] == MoveData.Effect.ATKself || moveEffects[i2] == MoveData.Effect.DEFself ||
+                moveEffects[i2] == MoveData.Effect.SPAself || moveEffects[i2] == MoveData.Effect.SPDself ||
+                moveEffects[i2] == MoveData.Effect.SPEself || moveEffects[i2] == MoveData.Effect.ACCself ||
+                moveEffects[i2] == MoveData.Effect.EVAself);
+        }
+        else
+        {
+            isTrue = (moveEffects[i2] == MoveData.Effect.ATK || moveEffects[i2] == MoveData.Effect.DEF ||
+                moveEffects[i2] == MoveData.Effect.SPA || moveEffects[i2] == MoveData.Effect.SPD ||
+                moveEffects[i2] == MoveData.Effect.SPE || moveEffects[i2] == MoveData.Effect.ACC ||
+                moveEffects[i2] == MoveData.Effect.EVA);
+        }
+        return isTrue;
+    }
+    #endregion
 
+    ///////////
+    //  Battle Animations
+    ///////////
+    #region
+    private IEnumerator AnimateBattleBegin(bool trainerBattle, Pokemon[] opponentParty, string opponentName)
+    {
         if (trainerBattle)
         {
             StartCoroutine(ScreenFade.main.Fade(true, 1.2f));
@@ -3668,7 +3798,7 @@ public class BattleHandler : MonoBehaviour
             Dialog.UndrawDialogBox();
         }
         else
-        {
+        {   // Wild Pokemon Battle
             player1.transform.parent.parent.gameObject.SetActive(false);
             opponent1.transform.parent.parent.gameObject.SetActive(false);
 
@@ -3694,8 +3824,228 @@ public class BattleHandler : MonoBehaviour
             yield return new WaitForSeconds(0.9f);
             Dialog.UndrawDialogBox();
         }
-        //
+        yield return new WaitForSeconds(.1f);
+    }
 
+    private IEnumerator RunFromBattleAnimation(bool running)
+    {
+        if (!running)
+        {
+            SfxHandler.Play(runClip);
+            Dialog.DrawDialogBox();
+            yield return StartCoroutine(Dialog.DrawTextSilent("Got away safely!"));
+            while (!Input.GetButtonDown("Select") && !Input.GetButtonDown("Back"))
+            {
+                yield return null;
+            }
+            Dialog.UndrawDialogBox();
+        }
+        else
+        {
+            yield return StartCoroutine(drawTextAndWait("Can't escape!"));
+        }
+    }
+
+    private IEnumerator FaintAnimations(int targetIndex)
+    {
+        //debug = array of GUITextures not yet implemented
+        yield return StartCoroutine(drawTextAndWait(generatePreString(targetIndex) +
+            pokemon[targetIndex].getName() + " fainted!", 2.4f));
+        Dialog.UndrawDialogBox();
+        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(PlayCry(pokemon[targetIndex]));
+        //flexible faint animtions not yet implemented
+        if (targetIndex == 0)
+        {
+            StartCoroutine(slidePokemonStats(0, true));
+            yield return StartCoroutine(faintPokemonAnimation(player1));
+        }
+        else if (targetIndex == 3)
+        {
+            StartCoroutine(slidePokemonStats(3, true));
+            yield return StartCoroutine(faintPokemonAnimation(opponent1));
+        }
+    }
+   
+    private IEnumerator SwitchAnimations(int i, int movingPokemon)
+    {
+        //switch pokemon
+        //enemy switching not yet implemented
+
+        yield return StartCoroutine(drawTextAndWait(pokemon[movingPokemon].getName() + ", come back!", 1.5f, 1.5f));
+        Dialog.UndrawDialogBox();
+
+        StartCoroutine(slidePokemonStats(0, true));
+        yield return StartCoroutine(withdrawPokemon(player1));
+        yield return new WaitForSeconds(0.5f);
+
+        switchPokemon(movingPokemon, commandPokemon[movingPokemon]);
+
+        yield return new WaitForSeconds(0.5f);
+        yield return StartCoroutine(drawTextAndWait("Go! " + pokemon[movingPokemon].getName() + "!", 1.5f, 1.5f));
+        Dialog.UndrawDialogBox();
+
+        if (i == 0)
+        {
+            //DEBUG
+            Debug.Log(pokemon[0].getLongID());
+            StopCoroutine(animatePlayer1);
+            animatePlayer1 = StartCoroutine(animatePokemon(player1, pokemon[0].GetBackAnim_()));
+            yield return new WaitForSeconds(0.2f);
+            updatePokemonStatsDisplay(i);
+            yield return StartCoroutine(releasePokemon(player1));
+            PlayCry(pokemon[0]);
+            yield return new WaitForSeconds(0.3f);
+            yield return StartCoroutine(slidePokemonStats(0, false));
+        }
+        pokemonHasMoved[movingPokemon] = true;
+    }
+    
+    private IEnumerator CheckEvolutions(int[] initialLevels)
+    {
+        for (int i = 0; i < initialLevels.Length; i++)
+        {
+            if (SaveData.currentSave.PC.boxes[0][i] != null)
+            {
+                //if level is different to it was at the start of the battle
+                if (SaveData.currentSave.PC.boxes[0][i].getLevel() != initialLevels[i])
+                {
+                    //if can evolve
+                    if (SaveData.currentSave.PC.boxes[0][i].canEvolve("Level"))
+                    {
+                        BgmHandler.main.PlayOverlay(null, 0, 0);
+
+                        //Set SceneEvolution to be active so that it appears
+                        Scene.main.Evolution.gameObject.SetActive(true);
+                        StartCoroutine(Scene.main.Evolution.control(SaveData.currentSave.PC.boxes[0][i], "Level"));
+                        //Start an empty loop that will only stop when SceneEvolution is no longer active (is closed)
+                        while (Scene.main.Evolution.gameObject.activeSelf)
+                        {
+                            yield return null;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #endregion
+
+#endregion
+
+    /// Basic Wild Battle
+    public IEnumerator control(Pokemon wildPokemon)
+    {
+        yield return StartCoroutine(control(false, new Trainer(new Pokemon[] {wildPokemon}), false));
+    }
+
+    /// Basic Trainer Battle
+    public IEnumerator control(Trainer trainer)
+    {
+        yield return StartCoroutine(control(true, trainer, false));
+    }
+        
+    public IEnumerator control(bool isTrainerBattle, Trainer trainer, bool healedOnDefeat)
+    {
+        //Used to compare after the battle to check for evolutions.
+        int[] initialLevels = initInitialLevels();
+
+        trainerBattle = isTrainerBattle;
+        Pokemon[] opponentParty = trainer.GetParty();
+        string opponentName = trainer.GetName();
+
+        //GET BATTLE BACKGROUNDS
+        int currentTileTag = PlayerMovement.player.currentMap.getTileTag(PlayerMovement.player.transform.position);
+        Debug.Log(currentTileTag);
+        background.sprite = PlayerMovement.player.accessedMapSettings.getBattleBackground(currentTileTag);
+
+        playerBase.sprite = PlayerMovement.player.accessedMapSettings.getBattleBase(currentTileTag);
+        opponentBase.sprite = playerBase.sprite;
+
+        //Set Trainer Sprites
+        trainer1Animation = new Sprite[] {Resources.Load<Sprite>("null")};
+        if (trainerBattle)
+        {
+            trainer1Animation = trainer.GetSprites();
+        }
+        playerTrainer1Animation =
+            Resources.LoadAll<Sprite>("PlayerSprites/" + SaveData.currentSave.getPlayerSpritePrefix() + "back");
+        playerTrainerSprite1.sprite = playerTrainer1Animation[0];
+        //Note: the player animation should NEVER have no sprites 
+        if (trainer1Animation.Length > 0)
+        {
+            trainerSprite1.sprite = trainer1Animation[0];
+        }
+        else
+        {
+            trainerSprite1.sprite = Resources.Load<Sprite>("null");
+        }
+        //Set trainer sprites to the center of the platform initially
+        playerTrainerSprite1.rectTransform.localPosition = 
+            new Vector3(0, playerTrainerSprite1.rectTransform.localPosition.y, 0);
+        trainerSprite1.rectTransform.localPosition = new Vector3(0, trainerSprite1.rectTransform.localPosition.y, 0);
+
+        victor = -1; //0 = player, 1 = opponent, 2 = tie
+
+        //Reset position variables
+        currentTask = 0;
+        taskPosition = 1;
+        movePosition = 1;
+        bagCategoryPosition = 0;
+        pokePartyPosition = 0;
+        itemListPagePosition = 0;
+        itemListPageCount = 0;
+
+        updateCurrentTask(-1);
+        updateSelectedTask(1);
+        updateSelectedMove(1);
+
+        bool running = true;
+        bool runState = true;
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (SaveData.currentSave.PC.boxes[0][i] != null)
+            {
+                if (SaveData.currentSave.PC.boxes[0][i].getStatus() != Pokemon.Status.FAINTED)
+                {
+                    switchPokemon(0, SaveData.currentSave.PC.boxes[0][i], false, true);
+                    break;
+                }
+            }
+        }
+        switchPokemon(3, opponentParty[0], false, true);
+
+        player1Animation = pokemon[0].GetBackAnim_();
+        opponent1Animation = pokemon[3].GetFrontAnim_();
+
+        updatePokemonStatsDisplay(0);
+        updatePokemonStatsDisplay(3);
+
+        if (pokemon[0] != null)
+        {
+            updateMovesetDisplay(pokemonMoveset[0], pokemon[0].getPP(), pokemon[0].getMaxPP());
+        }
+
+        //Animate the Pokemon being released into battle
+        player1.transform.parent.parent.gameObject.SetActive(false);
+        opponent1.transform.parent.parent.gameObject.SetActive(false);
+        player1Overlay.gameObject.SetActive(false);
+        opponent1Overlay.gameObject.SetActive(false);
+
+        animateOpponent1 = StartCoroutine(animatePokemon(opponent1, opponent1Animation));
+        animatePlayer1 = StartCoroutine(animatePokemon(player1, player1Animation));
+
+        pokemonStatsDisplay[0].gameObject.SetActive(false);
+        pokemonStatsDisplay[3].gameObject.SetActive(false);
+
+        hidePartyBar(true);
+        hidePartyBar(false);
+
+        //		Debug.Log(pokemon[0].getName()+": HP: "+pokemon[0].getHP()+"ATK: "+pokemon[0].getATK()+"DEF: "+pokemon[0].getDEF()+"SPA: "+pokemon[0].getSPA()+"SPD: "+pokemon[0].getSPD()+"SPE:"+pokemon[0].getSPE());
+        //		Debug.Log(pokemon[3].getName()+": HP: "+pokemon[3].getHP()+"ATK: "+pokemon[3].getATK()+"DEF: "+pokemon[3].getDEF()+"SPA: "+pokemon[3].getSPA()+"SPD: "+pokemon[3].getSPD()+"SPE:"+pokemon[3].getSPE());
+
+        /// Animate the opening sequence of Pokemon Battle
+        yield return StartCoroutine(AnimateBattleBegin(trainerBattle, opponentParty, opponentName));
 
         updateCurrentTask(0);
 
@@ -3708,11 +4058,9 @@ public class BattleHandler : MonoBehaviour
             commandTarget = new int[6];
             commandItem = new ItemData[6];
             commandPokemon = new Pokemon[6];
-            //
 
             //Reset Turn Feedback
             pokemonHasMoved = new bool[6];
-
 
             if (pokemon[0] != null)
             {
@@ -3729,6 +4077,7 @@ public class BattleHandler : MonoBehaviour
             ////////////////////////////////////////
             /// Task Selection State
             ////////////////////////////////////////
+            #region
             runState = true;
             while (runState)
             {
@@ -3805,886 +4154,888 @@ public class BattleHandler : MonoBehaviour
                     //// NAVIGATE MOVESET OPTIONS ////
 
                     int currentPokemon = 0;
-
-                    if (taskPosition == 1)
+                    switch(taskPosition)
                     {
-                        updateCurrentTask(1);
-                        SfxHandler.Play(selectClip);
-                        yield return null;
-
-                        //while still in Move Selection menu
-                        while (currentTask == 1)
-                        {
-                            if (Input.GetAxisRaw("Horizontal") < 0)
+                        case 1:
                             {
-                                if (movePosition == 1)
-                                {
-                                    if (canMegaEvolve)
-                                    {
-                                        updateSelectedMove(0);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                    else
-                                    {
-                                        updateSelectedMove(3);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                                else if (movePosition > 1 && movePosition != 3)
-                                {
-                                    if (movePosition == 5)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][2] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition - 1);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        updateSelectedMove(movePosition - 1);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Horizontal") > 0)
-                            {
-                                if (movePosition < 5 && movePosition != 2)
-                                {
-                                    if (movePosition == 1)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][1] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition + 1);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else if (movePosition == 3)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][2] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition + 1);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                        else
-                                        {
-                                            updateSelectedMove(1);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else if (movePosition == 4)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][3] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition + 1);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                        else if (pokemonMoveset[currentPokemon][1] != null)
-                                        {
-                                            //check there is a move 2
-                                            updateSelectedMove(2);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        updateSelectedMove(movePosition + 1);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Vertical") > 0)
-                            {
-                                if (movePosition == 3)
-                                {
-                                    if (canMegaEvolve)
-                                    {
-                                        updateSelectedMove(movePosition - 3);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                    else
-                                    {
-                                        //otherwise, go down to return
-                                        updateSelectedMove(1);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                                else if (movePosition > 3)
-                                {
-                                    if (movePosition == 5)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][1] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition - 3);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        updateSelectedMove(movePosition - 3);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Vertical") < 0)
-                            {
-                                if (movePosition < 3)
-                                {
-                                    if (movePosition == 1)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][2] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition + 3);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                        else
-                                        {
-                                            //otherwise, go down to return
-                                            updateSelectedMove(3);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else if (movePosition == 2)
-                                    {
-                                        if (pokemonMoveset[currentPokemon][3] != null)
-                                        {
-                                            //check destination has a move there
-                                            updateSelectedMove(movePosition + 3);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                        else if (pokemonMoveset[currentPokemon][2] != null)
-                                        {
-                                            //check if there is a move 3
-                                            updateSelectedMove(4);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                        else
-                                        {
-                                            //otherwise, go down to return
-                                            updateSelectedMove(3);
-                                            SfxHandler.Play(scrollClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        updateSelectedMove(movePosition + 3);
-                                        SfxHandler.Play(scrollClip);
-                                        yield return new WaitForSeconds(0.2f);
-                                    }
-                                }
-                            }
-                            else if (Input.GetButtonDown("Select"))
-                            {
-                                if (movePosition == 0)
-                                {
-                                    //if mega evolution selected (mega evolution not yet implemented)
-                                }
-                                else if (movePosition == 3)
-                                {
-                                    //if back selected
-                                    SfxHandler.Play(selectClip);
-                                    updateCurrentTask(0);
-                                }
-                                else
-                                {
-                                    //if a move is selected
-                                    //check if struggle is to be used (no PP left in any move)
-                                    if (pokemon[currentPokemon].getPP(0) == 0 && pokemon[currentPokemon].getPP(1) == 0 &&
-                                        pokemon[currentPokemon].getPP(2) == 0 && pokemon[currentPokemon].getPP(3) == 0)
-                                    {
-                                        commandMove[currentPokemon] = MoveDatabase.getMove("Struggle");
-                                        runState = false;
-                                    }
-                                    else
-                                    {
-                                        //convert movePosition to moveset index
-                                        int[] move = new int[] {0, 0, 1, 0, 2, 3};
-                                        if (pokemon[currentPokemon].getPP(move[movePosition]) > 0)
-                                        {
-                                            commandMove[currentPokemon] =
-                                                MoveDatabase.getMove(pokemonMoveset[currentPokemon][move[movePosition]]);
-                                            runState = false;
-                                        }
-                                        else
-                                        {
-                                            yield return StartCoroutine(drawTextAndWait("That move is out of PP!"));
-                                            Dialog.UndrawDialogBox();
-                                        }
-                                    }
-                                }
-                                if (!runState)
-                                {
-                                    //if a move was chosen.
-                                    SfxHandler.Play(selectClip);
-                                    command[currentPokemon] = CommandType.Move;
-                                    updateCurrentTask(-1);
-                                }
-                            }
-                            else if (Input.GetButtonDown("Back"))
-                            {
+                                updateCurrentTask(1);
                                 SfxHandler.Play(selectClip);
-                                updateCurrentTask(0);
-                            }
+                                yield return null;
 
-                            yield return null;
-                        }
-                    }
-
-                    //// ATTEMPT TO FLEE ////
-
-                    else if (taskPosition == 4)
-                    {
-                        SfxHandler.Play(selectClip);
-                        if (trainerBattle)
-                        {
-                            yield return
-                                StartCoroutine(drawTextAndWait("No! There's no running from \\na Trainer Battle!"));
-                            Dialog.UndrawDialogBox();
-                        }
-                        else
-                        {
-                            command[currentPokemon] = CommandType.Flee;
-                            runState = false;
-                            updateCurrentTask(-1);
-                        }
-                    }
-
-                    //// OPEN BAG INTERFACE ////
-
-                    else if (taskPosition == 0 || taskPosition == 3)
-                    {
-                        updateCurrentTask(2);
-                        SfxHandler.Play(selectClip);
-                        yield return null;
-
-                        updateSelectedBagCategory(bagCategoryPosition);
-                        //while still in Bag menu
-                        while (currentTask == 2)
-                        {
-                            if (Input.GetAxisRaw("Vertical") < 0)
-                            {
-                                if (bagCategoryPosition < 4)
+                                //while still in Move Selection menu
+                                while (currentTask == 1)
                                 {
-                                    updateSelectedBagCategory(bagCategoryPosition + 2);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Horizontal") > 0)
-                            {
-                                if (bagCategoryPosition == 0 || bagCategoryPosition == 2 || bagCategoryPosition == 4)
-                                {
-                                    updateSelectedBagCategory(bagCategoryPosition + 1);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Horizontal") < 0)
-                            {
-                                if (bagCategoryPosition == 1 || bagCategoryPosition == 3 || bagCategoryPosition == 5)
-                                {
-                                    updateSelectedBagCategory(bagCategoryPosition - 1);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Vertical") > 0)
-                            {
-                                if (bagCategoryPosition > 1)
-                                {
-                                    updateSelectedBagCategory(bagCategoryPosition - 2);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetButtonDown("Select"))
-                            {
-                                if (bagCategoryPosition < 4)
-                                {
-                                    //Item Category
-                                    updateCurrentTask(4);
-                                    SfxHandler.Play(selectClip);
-
-                                    int itemListPosition = updateSelectedItemListSlot(0, 0);
-                                    yield return new WaitForSeconds(0.2f);
-                                    while (currentTask == 4)
+                                    if (Input.GetAxisRaw("Horizontal") < 0)
                                     {
-                                        if (Input.GetAxisRaw("Vertical") < 0)
+                                        if (movePosition == 1)
                                         {
-                                            if (itemListPosition < 8)
+                                            if (canMegaEvolve)
                                             {
-                                                int positionBeforeModification = itemListPosition;
-                                                if (itemListPosition < 7)
-                                                {
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, 2);
-                                                }
-                                                else
-                                                {
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
-                                                }
-                                                if (positionBeforeModification != itemListPosition)
-                                                {
-                                                    SfxHandler.Play(scrollClip);
-                                                    yield return new WaitForSeconds(0.2f);
-                                                }
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Horizontal") > 0)
-                                        {
-                                            if (itemListPosition < 8)
-                                            {
-                                                if (itemListPosition % 2 == 0)
-                                                {
-                                                    int positionBeforeModification = itemListPosition;
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
-                                                    if (positionBeforeModification != itemListPosition)
-                                                    {
-                                                        SfxHandler.Play(scrollClip);
-                                                        yield return new WaitForSeconds(0.2f);
-                                                    }
-                                                }
-                                                //go to next page of items
-                                                else if (itemListPagePosition < itemListPageCount - 1)
-                                                {
-                                                    int positionBeforeModification = itemListPosition;
-                                                    itemListPagePosition += 1;
-                                                    updateItemListDisplay();
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, -1);
-                                                    if (positionBeforeModification != itemListPosition)
-                                                    {
-                                                        SfxHandler.Play(scrollClip);
-                                                        yield return new WaitForSeconds(0.2f);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Horizontal") < 0)
-                                        {
-                                            if (itemListPosition < 8)
-                                            {
-                                                if (itemListPosition % 2 == 1)
-                                                {
-                                                    int positionBeforeModification = itemListPosition;
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, -1);
-                                                    if (positionBeforeModification != itemListPosition)
-                                                    {
-                                                        SfxHandler.Play(scrollClip);
-                                                        yield return new WaitForSeconds(0.2f);
-                                                    }
-                                                }
-                                                //go to previous page of items
-                                                else if (itemListPagePosition > 0)
-                                                {
-                                                    int positionBeforeModification = itemListPosition;
-                                                    itemListPagePosition -= 1;
-                                                    updateItemListDisplay();
-                                                    itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
-                                                    if (positionBeforeModification != itemListPosition)
-                                                    {
-                                                        SfxHandler.Play(scrollClip);
-                                                        yield return new WaitForSeconds(0.2f);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Vertical") > 0)
-                                        {
-                                            if (itemListPosition > 1)
-                                            {
-                                                int positionBeforeModification = itemListPosition;
-                                                itemListPosition = updateSelectedItemListSlot(itemListPosition, -2);
-                                                if (positionBeforeModification != itemListPosition)
-                                                {
-                                                    SfxHandler.Play(scrollClip);
-                                                    yield return new WaitForSeconds(0.2f);
-                                                }
-                                            }
-                                        }
-                                        else if (Input.GetButtonDown("Select"))
-                                        {
-                                            if (itemListPosition == 8)
-                                            {
-                                                SfxHandler.Play(selectClip);
-                                                updateCurrentTask(2);
+                                                updateSelectedMove(0);
+                                                SfxHandler.Play(scrollClip);
                                                 yield return new WaitForSeconds(0.2f);
                                             }
                                             else
                                             {
-                                                //use item
-                                                ItemData selectedItem =
-                                                    ItemDatabase.getItem(
-                                                        itemListString[itemListPosition + (8 * itemListPagePosition)]);
-                                                //Check item can be used
-                                                if (selectedItem.getItemEffect() == ItemData.ItemEffect.HP)
+                                                updateSelectedMove(3);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                        else if (movePosition > 1 && movePosition != 3)
+                                        {
+                                            if (movePosition == 5)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][2] != null)
                                                 {
-                                                    //Check target pokemon's health is not full
-                                                    int target = 0; //target selection not yet implemented
-                                                    if (pokemon[target].getCurrentHP() < pokemon[target].getHP())
-                                                    {
-                                                        commandItem[currentPokemon] = selectedItem;
-                                                        commandTarget[currentPokemon] = target;
-                                                        SaveData.currentSave.Bag.removeItem(selectedItem.getName(), 1);
-                                                        runState = false;
-                                                    }
-                                                    else
-                                                    {
-                                                        yield return
-                                                            StartCoroutine(drawTextAndWait("It won't have any effect!"))
-                                                            ;
-                                                        Dialog.UndrawDialogBox();
-                                                    }
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition - 1);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
                                                 }
-                                                else if (selectedItem.getItemEffect() == ItemData.ItemEffect.STATUS)
+                                            }
+                                            else
+                                            {
+                                                updateSelectedMove(movePosition - 1);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Horizontal") > 0)
+                                    {
+                                        if (movePosition < 5 && movePosition != 2)
+                                        {
+                                            if (movePosition == 1)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][1] != null)
                                                 {
-                                                    int target = 0; //target selection not yet implemented
-                                                    //Check target pokemon has the status the item cures
-                                                    string statusCurer = selectedItem.getStringParameter().ToUpper();
-                                                    //if an ALL is used, set it to cure anything but FAINTED or NONE.
-                                                    if (statusCurer == "ALL" &&
-                                                        pokemon[target].getStatus().ToString() != "FAINTED" &&
-                                                        pokemon[target].getStatus().ToString() != "NONE")
-                                                    {
-                                                        statusCurer = pokemon[target].getStatus().ToString();
-                                                    }
-
-                                                    if (pokemon[target].getStatus().ToString() == statusCurer)
-                                                    {
-                                                        commandItem[currentPokemon] = selectedItem;
-                                                        commandTarget[currentPokemon] = target;
-                                                        SaveData.currentSave.Bag.removeItem(
-                                                            itemListString[itemListPosition], 1);
-                                                        runState = false;
-                                                    }
-                                                    else
-                                                    {
-                                                        yield return
-                                                            StartCoroutine(drawTextAndWait("It won't have any effect!"))
-                                                            ;
-                                                        Dialog.UndrawDialogBox();
-                                                    }
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition + 1);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else if (movePosition == 3)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][2] != null)
+                                                {
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition + 1);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
                                                 }
                                                 else
                                                 {
-                                                    commandItem[currentPokemon] =
-                                                        ItemDatabase.getItem(itemListString[itemListPosition]);
-                                                    SaveData.currentSave.Bag.removeItem(
-                                                        itemListString[itemListPosition], 1);
+                                                    updateSelectedMove(1);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else if (movePosition == 4)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][3] != null)
+                                                {
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition + 1);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                                else if (pokemonMoveset[currentPokemon][1] != null)
+                                                {
+                                                    //check there is a move 2
+                                                    updateSelectedMove(2);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                updateSelectedMove(movePosition + 1);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Vertical") > 0)
+                                    {
+                                        if (movePosition == 3)
+                                        {
+                                            if (canMegaEvolve)
+                                            {
+                                                updateSelectedMove(movePosition - 3);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                            else
+                                            {
+                                                //otherwise, go down to return
+                                                updateSelectedMove(1);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                        else if (movePosition > 3)
+                                        {
+                                            if (movePosition == 5)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][1] != null)
+                                                {
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition - 3);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                updateSelectedMove(movePosition - 3);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Vertical") < 0)
+                                    {
+                                        if (movePosition < 3)
+                                        {
+                                            if (movePosition == 1)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][2] != null)
+                                                {
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition + 3);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                                else
+                                                {
+                                                    //otherwise, go down to return
+                                                    updateSelectedMove(3);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else if (movePosition == 2)
+                                            {
+                                                if (pokemonMoveset[currentPokemon][3] != null)
+                                                {
+                                                    //check destination has a move there
+                                                    updateSelectedMove(movePosition + 3);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                                else if (pokemonMoveset[currentPokemon][2] != null)
+                                                {
+                                                    //check if there is a move 3
+                                                    updateSelectedMove(4);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                                else
+                                                {
+                                                    //otherwise, go down to return
+                                                    updateSelectedMove(3);
+                                                    SfxHandler.Play(scrollClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                updateSelectedMove(movePosition + 3);
+                                                SfxHandler.Play(scrollClip);
+                                                yield return new WaitForSeconds(0.2f);
+                                            }
+                                        }
+                                    }
+                                    else if (Input.GetButtonDown("Select"))
+                                    {
+                                        if (movePosition == 0)
+                                        {
+                                            //if mega evolution selected (mega evolution not yet implemented)
+                                        }
+                                        else if (movePosition == 3)
+                                        {
+                                            //if back selected
+                                            SfxHandler.Play(selectClip);
+                                            updateCurrentTask(0);
+                                        }
+                                        else
+                                        {
+                                            //if a move is selected
+                                            //check if struggle is to be used (no PP left in any move)
+                                            if (pokemon[currentPokemon].getPP(0) == 0 && pokemon[currentPokemon].getPP(1) == 0 &&
+                                                pokemon[currentPokemon].getPP(2) == 0 && pokemon[currentPokemon].getPP(3) == 0)
+                                            {
+                                                commandMove[currentPokemon] = MoveDatabase.getMove("Struggle");
+                                                runState = false;
+                                            }
+                                            else
+                                            {
+                                                //convert movePosition to moveset index
+                                                int[] move = new int[] { 0, 0, 1, 0, 2, 3 };
+                                                if (pokemon[currentPokemon].getPP(move[movePosition]) > 0)
+                                                {
+                                                    commandMove[currentPokemon] =
+                                                        MoveDatabase.getMove(pokemonMoveset[currentPokemon][move[movePosition]]);
                                                     runState = false;
                                                 }
-                                                if (!runState)
+                                                else
                                                 {
-                                                    //if an item was chosen.
-                                                    SfxHandler.Play(selectClip);
-                                                    command[currentPokemon] = CommandType.Item;
-                                                    updateCurrentTask(-1);
+                                                    yield return StartCoroutine(drawTextAndWait("That move is out of PP!"));
+                                                    Dialog.UndrawDialogBox();
                                                 }
                                             }
                                         }
-                                        else if (Input.GetButtonDown("Back"))
+                                        if (!runState)
                                         {
+                                            //if a move was chosen.
                                             SfxHandler.Play(selectClip);
-                                            updateCurrentTask(2);
-                                            yield return new WaitForSeconds(0.2f);
+                                            command[currentPokemon] = CommandType.Move;
+                                            updateCurrentTask(-1);
                                         }
-
-
-                                        yield return null;
                                     }
-                                }
-                                else if (bagCategoryPosition == 4)
-                                {
-                                    //Back
-                                    updateCurrentTask(0);
-                                    SfxHandler.Play(selectClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                                else if (bagCategoryPosition == 5)
-                                {
-                                    //Item used last
-                                    SfxHandler.Play(selectClip);
-                                    yield return new WaitForSeconds(0.2f);
+                                    else if (Input.GetButtonDown("Back"))
+                                    {
+                                        SfxHandler.Play(selectClip);
+                                        updateCurrentTask(0);
+                                    }
+
+                                    yield return null;
                                 }
                             }
-                            else if (Input.GetButtonDown("Back"))
+                            break;
+                        //// ATTEMPT TO FLEE ////
+                        case 4:
                             {
                                 SfxHandler.Play(selectClip);
-                                updateCurrentTask(0);
-                                yield return new WaitForSeconds(0.2f);
-                            }
-
-                            yield return null;
-                        }
-                    }
-
-                    //// OPEN POKEMON INTERFACE ////
-
-                    else if (taskPosition == 2 || taskPosition == 5)
-                    {
-                        updateCurrentTask(3);
-                        SfxHandler.Play(selectClip);
-                        yield return null;
-
-                        //while still in Poke menu
-                        while (currentTask == 3)
-                        {
-                            if (Input.GetAxisRaw("Vertical") < 0)
-                            {
-                                if (pokePartyPosition < 6)
+                                if (trainerBattle)
                                 {
-                                    if (pokePartyPosition == 5)
-                                    {
-                                        updateSelectedPokemonSlot(pokePartyPosition + 1);
-                                    }
-                                    else
-                                    {
-                                        updateSelectedPokemonSlot(pokePartyPosition + 2);
-                                    }
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Horizontal") > 0)
-                            {
-                                if (pokePartyPosition < 6)
-                                {
-                                    updateSelectedPokemonSlot(pokePartyPosition + 1);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Horizontal") < 0)
-                            {
-                                if (pokePartyPosition > 0)
-                                {
-                                    updateSelectedPokemonSlot(pokePartyPosition - 1);
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetAxisRaw("Vertical") > 0)
-                            {
-                                if (pokePartyPosition > 1)
-                                {
-                                    if (pokePartyPosition == 6)
-                                    {
-                                        updateSelectedPokemonSlot(pokePartyPosition - 1);
-                                    }
-                                    else
-                                    {
-                                        updateSelectedPokemonSlot(pokePartyPosition - 2);
-                                    }
-                                    SfxHandler.Play(scrollClip);
-                                    yield return new WaitForSeconds(0.2f);
-                                }
-                            }
-                            else if (Input.GetButtonDown("Select"))
-                            {
-                                if (pokePartyPosition == 6)
-                                {
-                                    //Back
-                                    SfxHandler.Play(selectClip);
-                                    updateCurrentTask(0);
-                                    yield return new WaitForSeconds(0.2f);
+                                    yield return
+                                        StartCoroutine(drawTextAndWait("No! There's no running from \\na Trainer Battle!"));
+                                    Dialog.UndrawDialogBox();
                                 }
                                 else
                                 {
-                                    updateCurrentTask(5);
-                                    SfxHandler.Play(selectClip);
-                                    int summaryPosition = updateSummaryPosition(0); //0 = Switch, 1 = Moves, 2 = Back
+                                    command[currentPokemon] = CommandType.Flee;
+                                    runState = false;
+                                    updateCurrentTask(-1);
+                                }
+                            }
+                            break;
+                        //// OPEN BAG INTERFACE ////
+                        case 0:
+                        case 3:
+                            {
+                                updateCurrentTask(2);
+                                SfxHandler.Play(selectClip);
+                                yield return null;
 
-                                    yield return new WaitForSeconds(0.2f);
-                                    while (currentTask == 5)
+                                updateSelectedBagCategory(bagCategoryPosition);
+                                //while still in Bag menu
+                                while (currentTask == 2)
+                                {
+                                    if (Input.GetAxisRaw("Vertical") < 0)
                                     {
-                                        if (Input.GetAxisRaw("Vertical") < 0)
+                                        if (bagCategoryPosition < 4)
                                         {
-                                            if (pokePartyPosition < 5)
+                                            updateSelectedBagCategory(bagCategoryPosition + 2);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Horizontal") > 0)
+                                    {
+                                        if (bagCategoryPosition == 0 || bagCategoryPosition == 2 || bagCategoryPosition == 4)
+                                        {
+                                            updateSelectedBagCategory(bagCategoryPosition + 1);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Horizontal") < 0)
+                                    {
+                                        if (bagCategoryPosition == 1 || bagCategoryPosition == 3 || bagCategoryPosition == 5)
+                                        {
+                                            updateSelectedBagCategory(bagCategoryPosition - 1);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Vertical") > 0)
+                                    {
+                                        if (bagCategoryPosition > 1)
+                                        {
+                                            updateSelectedBagCategory(bagCategoryPosition - 2);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetButtonDown("Select"))
+                                    {
+                                        if (bagCategoryPosition < 4)
+                                        {
+                                            //Item Category
+                                            updateCurrentTask(4);
+                                            SfxHandler.Play(selectClip);
+
+                                            int itemListPosition = updateSelectedItemListSlot(0, 0);
+                                            yield return new WaitForSeconds(0.2f);
+                                            while (currentTask == 4)
                                             {
-                                                int positionBeforeModification = pokePartyPosition;
-                                                updateSelectedPokemonSlot(pokePartyPosition + 1, false);
-                                                if (positionBeforeModification != pokePartyPosition)
+                                                if (Input.GetAxisRaw("Vertical") < 0)
                                                 {
-                                                    SfxHandler.Play(scrollClip);
-                                                }
-                                                updatePokemonSummaryDisplay(
-                                                    SaveData.currentSave.PC.boxes[0][pokePartyPosition]);
-                                                yield return new WaitForSeconds(0.2f);
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Horizontal") > 0)
-                                        {
-                                            if (summaryPosition < 2)
-                                            {
-                                                summaryPosition = updateSummaryPosition(summaryPosition + 1);
-                                                SfxHandler.Play(scrollClip);
-                                                yield return new WaitForSeconds(0.2f);
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Horizontal") < 0)
-                                        {
-                                            if (summaryPosition > 0)
-                                            {
-                                                summaryPosition = updateSummaryPosition(summaryPosition - 1);
-                                                SfxHandler.Play(scrollClip);
-                                                yield return new WaitForSeconds(0.2f);
-                                            }
-                                        }
-                                        else if (Input.GetAxisRaw("Vertical") > 0)
-                                        {
-                                            if (pokePartyPosition > 0)
-                                            {
-                                                int positionBeforeModification = pokePartyPosition;
-                                                updateSelectedPokemonSlot(pokePartyPosition - 1, false);
-                                                if (positionBeforeModification != pokePartyPosition)
-                                                {
-                                                    SfxHandler.Play(scrollClip);
-                                                }
-                                                updatePokemonSummaryDisplay(
-                                                    SaveData.currentSave.PC.boxes[0][pokePartyPosition]);
-                                                yield return new WaitForSeconds(0.2f);
-                                            }
-                                        }
-                                        else if (Input.GetButtonDown("Select"))
-                                        {
-                                            if (summaryPosition == 0)
-                                            {
-                                                if (SaveData.currentSave.PC.boxes[0][pokePartyPosition].getStatus() !=
-                                                    Pokemon.Status.FAINTED)
-                                                {
-                                                    //check that pokemon is not on the field
-                                                    bool notOnField = true;
-                                                    for (int i = 0; i < pokemonPerSide; i++)
+                                                    if (itemListPosition < 8)
                                                     {
-                                                        if (SaveData.currentSave.PC.boxes[0][pokePartyPosition] ==
-                                                            pokemon[i])
+                                                        int positionBeforeModification = itemListPosition;
+                                                        if (itemListPosition < 7)
                                                         {
-                                                            notOnField = false;
-                                                            i = pokemonPerSide;
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, 2);
+                                                        }
+                                                        else
+                                                        {
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
+                                                        }
+                                                        if (positionBeforeModification != itemListPosition)
+                                                        {
+                                                            SfxHandler.Play(scrollClip);
+                                                            yield return new WaitForSeconds(0.2f);
                                                         }
                                                     }
-                                                    if (notOnField)
+                                                }
+                                                else if (Input.GetAxisRaw("Horizontal") > 0)
+                                                {
+                                                    if (itemListPosition < 8)
                                                     {
-                                                        //debug
-                                                        command[currentPokemon] = CommandType.Switch;
-                                                        commandPokemon[currentPokemon] =
-                                                            SaveData.currentSave.PC.boxes[0][pokePartyPosition];
-                                                        runState = false;
-                                                        updateCurrentTask(-1);
+                                                        if (itemListPosition % 2 == 0)
+                                                        {
+                                                            int positionBeforeModification = itemListPosition;
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
+                                                            if (positionBeforeModification != itemListPosition)
+                                                            {
+                                                                SfxHandler.Play(scrollClip);
+                                                                yield return new WaitForSeconds(0.2f);
+                                                            }
+                                                        }
+                                                        //go to next page of items
+                                                        else if (itemListPagePosition < itemListPageCount - 1)
+                                                        {
+                                                            int positionBeforeModification = itemListPosition;
+                                                            itemListPagePosition += 1;
+                                                            updateItemListDisplay();
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, -1);
+                                                            if (positionBeforeModification != itemListPosition)
+                                                            {
+                                                                SfxHandler.Play(scrollClip);
+                                                                yield return new WaitForSeconds(0.2f);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                else if (Input.GetAxisRaw("Horizontal") < 0)
+                                                {
+                                                    if (itemListPosition < 8)
+                                                    {
+                                                        if (itemListPosition % 2 == 1)
+                                                        {
+                                                            int positionBeforeModification = itemListPosition;
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, -1);
+                                                            if (positionBeforeModification != itemListPosition)
+                                                            {
+                                                                SfxHandler.Play(scrollClip);
+                                                                yield return new WaitForSeconds(0.2f);
+                                                            }
+                                                        }
+                                                        //go to previous page of items
+                                                        else if (itemListPagePosition > 0)
+                                                        {
+                                                            int positionBeforeModification = itemListPosition;
+                                                            itemListPagePosition -= 1;
+                                                            updateItemListDisplay();
+                                                            itemListPosition = updateSelectedItemListSlot(itemListPosition, 1);
+                                                            if (positionBeforeModification != itemListPosition)
+                                                            {
+                                                                SfxHandler.Play(scrollClip);
+                                                                yield return new WaitForSeconds(0.2f);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                else if (Input.GetAxisRaw("Vertical") > 0)
+                                                {
+                                                    if (itemListPosition > 1)
+                                                    {
+                                                        int positionBeforeModification = itemListPosition;
+                                                        itemListPosition = updateSelectedItemListSlot(itemListPosition, -2);
+                                                        if (positionBeforeModification != itemListPosition)
+                                                        {
+                                                            SfxHandler.Play(scrollClip);
+                                                            yield return new WaitForSeconds(0.2f);
+                                                        }
+                                                    }
+                                                }
+                                                else if (Input.GetButtonDown("Select"))
+                                                {
+                                                    if (itemListPosition == 8)
+                                                    {
                                                         SfxHandler.Play(selectClip);
+                                                        updateCurrentTask(2);
                                                         yield return new WaitForSeconds(0.2f);
                                                     }
                                                     else
                                                     {
-                                                        yield return
-                                                            StartCoroutine(
-                                                                drawTextAndWait(
-                                                                    SaveData.currentSave.PC.boxes[0][pokePartyPosition]
-                                                                        .getName() + " is already fighting!"));
-                                                        Dialog.UndrawDialogBox();
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    yield return
-                                                        StartCoroutine(
-                                                            drawTextAndWait(
-                                                                SaveData.currentSave.PC.boxes[0][pokePartyPosition]
-                                                                    .getName() + " is unable to fight!"));
-                                                    Dialog.UndrawDialogBox();
-                                                }
-                                            }
-                                            else if (summaryPosition == 1)
-                                            {
-//check moves
-                                                updateCurrentTask(6);
-                                                SfxHandler.Play(selectClip);
-                                                yield return new WaitForSeconds(0.2f);
+                                                        //use item
+                                                        ItemData selectedItem =
+                                                            ItemDatabase.getItem(
+                                                                itemListString[itemListPosition + (8 * itemListPagePosition)]);
+                                                        //Check item can be used
+                                                        if (selectedItem.getItemEffect() == ItemData.ItemEffect.HP)
+                                                        {
+                                                            //Check target pokemon's health is not full
+                                                            int target = 0; //target selection not yet implemented
+                                                            if (pokemon[target].getCurrentHP() < pokemon[target].getHP())
+                                                            {
+                                                                commandItem[currentPokemon] = selectedItem;
+                                                                commandTarget[currentPokemon] = target;
+                                                                SaveData.currentSave.Bag.removeItem(selectedItem.getName(), 1);
+                                                                runState = false;
+                                                            }
+                                                            else
+                                                            {
+                                                                yield return
+                                                                    StartCoroutine(drawTextAndWait("It won't have any effect!"))
+                                                                    ;
+                                                                Dialog.UndrawDialogBox();
+                                                            }
+                                                        }
+                                                        else if (selectedItem.getItemEffect() == ItemData.ItemEffect.STATUS)
+                                                        {
+                                                            int target = 0; //target selection not yet implemented
+                                                            //Check target pokemon has the status the item cures
+                                                            string statusCurer = selectedItem.getStringParameter().ToUpper();
+                                                            //if an ALL is used, set it to cure anything but FAINTED or NONE.
+                                                            if (statusCurer == "ALL" &&
+                                                                pokemon[target].getStatus().ToString() != "FAINTED" &&
+                                                                pokemon[target].getStatus().ToString() != "NONE")
+                                                            {
+                                                                statusCurer = pokemon[target].getStatus().ToString();
+                                                            }
 
-                                                int movesPosition = 5; //0-3 = Moves, 4 = Switch, 5 = Summary, 6 = Back
-                                                while (currentTask == 6)
+                                                            if (pokemon[target].getStatus().ToString() == statusCurer)
+                                                            {
+                                                                commandItem[currentPokemon] = selectedItem;
+                                                                commandTarget[currentPokemon] = target;
+                                                                SaveData.currentSave.Bag.removeItem(
+                                                                    itemListString[itemListPosition], 1);
+                                                                runState = false;
+                                                            }
+                                                            else
+                                                            {
+                                                                yield return
+                                                                    StartCoroutine(drawTextAndWait("It won't have any effect!"))
+                                                                    ;
+                                                                Dialog.UndrawDialogBox();
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            commandItem[currentPokemon] =
+                                                                ItemDatabase.getItem(itemListString[itemListPosition]);
+                                                            SaveData.currentSave.Bag.removeItem(
+                                                                itemListString[itemListPosition], 1);
+                                                            runState = false;
+                                                        }
+                                                        if (!runState)
+                                                        {
+                                                            //if an item was chosen.
+                                                            SfxHandler.Play(selectClip);
+                                                            command[currentPokemon] = CommandType.Item;
+                                                            updateCurrentTask(-1);
+                                                        }
+                                                    }
+                                                }
+                                                else if (Input.GetButtonDown("Back"))
                                                 {
-                                                    if (Input.GetAxisRaw("Vertical") < 0)
+                                                    SfxHandler.Play(selectClip);
+                                                    updateCurrentTask(2);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
+
+
+                                                yield return null;
+                                            }
+                                        }
+                                        else if (bagCategoryPosition == 4)
+                                        {
+                                            //Back
+                                            updateCurrentTask(0);
+                                            SfxHandler.Play(selectClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                        else if (bagCategoryPosition == 5)
+                                        {
+                                            //Item used last
+                                            SfxHandler.Play(selectClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetButtonDown("Back"))
+                                    {
+                                        SfxHandler.Play(selectClip);
+                                        updateCurrentTask(0);
+                                        yield return new WaitForSeconds(0.2f);
+                                    }
+
+                                    yield return null;
+                                }
+                            }
+                            break;
+                        //// OPEN POKEMON INTERFACE ////
+                        case 2:
+                        case 5:
+                            {
+                                updateCurrentTask(3);
+                                SfxHandler.Play(selectClip);
+                                yield return null;
+
+                                //while still in Poke menu
+                                while (currentTask == 3)
+                                {
+                                    if (Input.GetAxisRaw("Vertical") < 0)
+                                    {
+                                        if (pokePartyPosition < 6)
+                                        {
+                                            if (pokePartyPosition == 5)
+                                            {
+                                                updateSelectedPokemonSlot(pokePartyPosition + 1);
+                                            }
+                                            else
+                                            {
+                                                updateSelectedPokemonSlot(pokePartyPosition + 2);
+                                            }
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Horizontal") > 0)
+                                    {
+                                        if (pokePartyPosition < 6)
+                                        {
+                                            updateSelectedPokemonSlot(pokePartyPosition + 1);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Horizontal") < 0)
+                                    {
+                                        if (pokePartyPosition > 0)
+                                        {
+                                            updateSelectedPokemonSlot(pokePartyPosition - 1);
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetAxisRaw("Vertical") > 0)
+                                    {
+                                        if (pokePartyPosition > 1)
+                                        {
+                                            if (pokePartyPosition == 6)
+                                            {
+                                                updateSelectedPokemonSlot(pokePartyPosition - 1);
+                                            }
+                                            else
+                                            {
+                                                updateSelectedPokemonSlot(pokePartyPosition - 2);
+                                            }
+                                            SfxHandler.Play(scrollClip);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                    }
+                                    else if (Input.GetButtonDown("Select"))
+                                    {
+                                        if (pokePartyPosition == 6)
+                                        {
+                                            //Back
+                                            SfxHandler.Play(selectClip);
+                                            updateCurrentTask(0);
+                                            yield return new WaitForSeconds(0.2f);
+                                        }
+                                        else
+                                        {
+                                            updateCurrentTask(5);
+                                            SfxHandler.Play(selectClip);
+                                            int summaryPosition = updateSummaryPosition(0); //0 = Switch, 1 = Moves, 2 = Back
+
+                                            yield return new WaitForSeconds(0.2f);
+                                            while (currentTask == 5)
+                                            {
+                                                if (Input.GetAxisRaw("Vertical") < 0)
+                                                {
+                                                    if (pokePartyPosition < 5)
                                                     {
-                                                        if (movesPosition < 4)
+                                                        int positionBeforeModification = pokePartyPosition;
+                                                        updateSelectedPokemonSlot(pokePartyPosition + 1, false);
+                                                        if (positionBeforeModification != pokePartyPosition)
                                                         {
-                                                            if (movesPosition == 2)
-                                                            {
-                                                                movesPosition = updateMovesPosition(movesPosition + 3);
-                                                            }
-                                                            else
-                                                            {
-                                                                movesPosition = updateMovesPosition(movesPosition + 2);
-                                                            }
                                                             SfxHandler.Play(scrollClip);
-                                                            yield return new WaitForSeconds(0.2f);
                                                         }
+                                                        updatePokemonSummaryDisplay(
+                                                            SaveData.currentSave.PC.boxes[0][pokePartyPosition]);
+                                                        yield return new WaitForSeconds(0.2f);
                                                     }
-                                                    else if (Input.GetAxisRaw("Horizontal") > 0)
+                                                }
+                                                else if (Input.GetAxisRaw("Horizontal") > 0)
+                                                {
+                                                    if (summaryPosition < 2)
                                                     {
-                                                        if (movesPosition != 1 || movesPosition != 3 ||
-                                                            movesPosition != 6)
+                                                        summaryPosition = updateSummaryPosition(summaryPosition + 1);
+                                                        SfxHandler.Play(scrollClip);
+                                                        yield return new WaitForSeconds(0.2f);
+                                                    }
+                                                }
+                                                else if (Input.GetAxisRaw("Horizontal") < 0)
+                                                {
+                                                    if (summaryPosition > 0)
+                                                    {
+                                                        summaryPosition = updateSummaryPosition(summaryPosition - 1);
+                                                        SfxHandler.Play(scrollClip);
+                                                        yield return new WaitForSeconds(0.2f);
+                                                    }
+                                                }
+                                                else if (Input.GetAxisRaw("Vertical") > 0)
+                                                {
+                                                    if (pokePartyPosition > 0)
+                                                    {
+                                                        int positionBeforeModification = pokePartyPosition;
+                                                        updateSelectedPokemonSlot(pokePartyPosition - 1, false);
+                                                        if (positionBeforeModification != pokePartyPosition)
                                                         {
-                                                            movesPosition = updateMovesPosition(movesPosition + 1);
                                                             SfxHandler.Play(scrollClip);
-                                                            yield return new WaitForSeconds(0.2f);
                                                         }
+                                                        updatePokemonSummaryDisplay(
+                                                            SaveData.currentSave.PC.boxes[0][pokePartyPosition]);
+                                                        yield return new WaitForSeconds(0.2f);
                                                     }
-                                                    else if (Input.GetAxisRaw("Horizontal") < 0)
+                                                }
+                                                else if (Input.GetButtonDown("Select"))
+                                                {
+                                                    if (summaryPosition == 0)
                                                     {
-                                                        if (movesPosition == 1 || movesPosition == 3 ||
-                                                            movesPosition > 4)
+                                                        if (SaveData.currentSave.PC.boxes[0][pokePartyPosition].getStatus() !=
+                                                            Pokemon.Status.FAINTED)
                                                         {
-                                                            movesPosition = updateMovesPosition(movesPosition - 1);
-                                                            SfxHandler.Play(scrollClip);
-                                                            yield return new WaitForSeconds(0.2f);
-                                                        }
-                                                    }
-                                                    else if (Input.GetAxisRaw("Vertical") > 0)
-                                                    {
-                                                        if (movesPosition > 1)
-                                                        {
-                                                            if (movesPosition > 3)
+                                                            //check that pokemon is not on the field
+                                                            bool notOnField = true;
+                                                            for (int i = 0; i < pokemonPerSide; i++)
                                                             {
-                                                                movesPosition = updateMovesPosition(2);
-                                                            }
-                                                            else
-                                                            {
-                                                                movesPosition = updateMovesPosition(movesPosition - 2);
-                                                            }
-                                                            SfxHandler.Play(scrollClip);
-                                                            yield return new WaitForSeconds(0.2f);
-                                                        }
-                                                    }
-                                                    else if (Input.GetButtonDown("Select"))
-                                                    {
-                                                        if (movesPosition == 4)
-                                                        {
-                                                            if (
-                                                                SaveData.currentSave.PC.boxes[0][pokePartyPosition]
-                                                                    .getStatus() != Pokemon.Status.FAINTED)
-                                                            {
-                                                                //check that pokemon is not on the field
-                                                                bool notOnField = true;
-                                                                for (int i = 0; i < pokemonPerSide; i++)
+                                                                if (SaveData.currentSave.PC.boxes[0][pokePartyPosition] ==
+                                                                    pokemon[i])
                                                                 {
-                                                                    if (
-                                                                        SaveData.currentSave.PC.boxes[0][
-                                                                            pokePartyPosition] == pokemon[i])
-                                                                    {
-                                                                        notOnField = false;
-                                                                        i = pokemonPerSide;
-                                                                    }
+                                                                    notOnField = false;
+                                                                    i = pokemonPerSide;
                                                                 }
-                                                                if (notOnField)
-                                                                {
-                                                                    //debug
-                                                                    command[currentPokemon] = CommandType.Switch;
-                                                                    commandPokemon[currentPokemon] =
-                                                                        SaveData.currentSave.PC.boxes[0][
-                                                                            pokePartyPosition];
-                                                                    runState = false;
-                                                                    updateCurrentTask(-1);
-                                                                    SfxHandler.Play(selectClip);
-                                                                    yield return new WaitForSeconds(0.2f);
-                                                                }
-                                                                else
-                                                                {
-                                                                    yield return
-                                                                        StartCoroutine(
-                                                                            drawTextAndWait(
-                                                                                SaveData.currentSave.PC.boxes[0][
-                                                                                    pokePartyPosition].getName() +
-                                                                                " is already fighting!"));
-                                                                    Dialog.UndrawDialogBox();
-                                                                }
+                                                            }
+                                                            if (notOnField)
+                                                            {
+                                                                //debug
+                                                                command[currentPokemon] = CommandType.Switch;
+                                                                commandPokemon[currentPokemon] =
+                                                                    SaveData.currentSave.PC.boxes[0][pokePartyPosition];
+                                                                runState = false;
+                                                                updateCurrentTask(-1);
+                                                                SfxHandler.Play(selectClip);
+                                                                yield return new WaitForSeconds(0.2f);
                                                             }
                                                             else
                                                             {
                                                                 yield return
                                                                     StartCoroutine(
                                                                         drawTextAndWait(
-                                                                            SaveData.currentSave.PC.boxes[0][
-                                                                                pokePartyPosition].getName() +
-                                                                            " is unable to fight!"));
+                                                                            SaveData.currentSave.PC.boxes[0][pokePartyPosition]
+                                                                                .getName() + " is already fighting!"));
                                                                 Dialog.UndrawDialogBox();
                                                             }
                                                         }
-                                                        else if (movesPosition == 5)
+                                                        else
                                                         {
-//check summary
-                                                            updateCurrentTask(5);
-                                                            SfxHandler.Play(selectClip);
-                                                            yield return new WaitForSeconds(0.2f);
-                                                        }
-                                                        else if (movesPosition == 6)
-                                                        {
-//back
-                                                            updateCurrentTask(3);
-                                                            SfxHandler.Play(selectClip);
-                                                            yield return new WaitForSeconds(0.2f);
+                                                            yield return
+                                                                StartCoroutine(
+                                                                    drawTextAndWait(
+                                                                        SaveData.currentSave.PC.boxes[0][pokePartyPosition]
+                                                                            .getName() + " is unable to fight!"));
+                                                            Dialog.UndrawDialogBox();
                                                         }
                                                     }
-                                                    else if (Input.GetButtonDown("Back"))
+                                                    else if (summaryPosition == 1)
                                                     {
+                                                        //check moves
+                                                        updateCurrentTask(6);
+                                                        SfxHandler.Play(selectClip);
+                                                        yield return new WaitForSeconds(0.2f);
+
+                                                        int movesPosition = 5; //0-3 = Moves, 4 = Switch, 5 = Summary, 6 = Back
+                                                        while (currentTask == 6)
+                                                        {
+                                                            if (Input.GetAxisRaw("Vertical") < 0)
+                                                            {
+                                                                if (movesPosition < 4)
+                                                                {
+                                                                    if (movesPosition == 2)
+                                                                    {
+                                                                        movesPosition = updateMovesPosition(movesPosition + 3);
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        movesPosition = updateMovesPosition(movesPosition + 2);
+                                                                    }
+                                                                    SfxHandler.Play(scrollClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                            }
+                                                            else if (Input.GetAxisRaw("Horizontal") > 0)
+                                                            {
+                                                                if (movesPosition != 1 || movesPosition != 3 ||
+                                                                    movesPosition != 6)
+                                                                {
+                                                                    movesPosition = updateMovesPosition(movesPosition + 1);
+                                                                    SfxHandler.Play(scrollClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                            }
+                                                            else if (Input.GetAxisRaw("Horizontal") < 0)
+                                                            {
+                                                                if (movesPosition == 1 || movesPosition == 3 ||
+                                                                    movesPosition > 4)
+                                                                {
+                                                                    movesPosition = updateMovesPosition(movesPosition - 1);
+                                                                    SfxHandler.Play(scrollClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                            }
+                                                            else if (Input.GetAxisRaw("Vertical") > 0)
+                                                            {
+                                                                if (movesPosition > 1)
+                                                                {
+                                                                    if (movesPosition > 3)
+                                                                    {
+                                                                        movesPosition = updateMovesPosition(2);
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        movesPosition = updateMovesPosition(movesPosition - 2);
+                                                                    }
+                                                                    SfxHandler.Play(scrollClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                            }
+                                                            else if (Input.GetButtonDown("Select"))
+                                                            {
+                                                                if (movesPosition == 4)
+                                                                {
+                                                                    if (
+                                                                        SaveData.currentSave.PC.boxes[0][pokePartyPosition]
+                                                                            .getStatus() != Pokemon.Status.FAINTED)
+                                                                    {
+                                                                        //check that pokemon is not on the field
+                                                                        bool notOnField = true;
+                                                                        for (int i = 0; i < pokemonPerSide; i++)
+                                                                        {
+                                                                            if (
+                                                                                SaveData.currentSave.PC.boxes[0][
+                                                                                    pokePartyPosition] == pokemon[i])
+                                                                            {
+                                                                                notOnField = false;
+                                                                                i = pokemonPerSide;
+                                                                            }
+                                                                        }
+                                                                        if (notOnField)
+                                                                        {
+                                                                            //debug
+                                                                            command[currentPokemon] = CommandType.Switch;
+                                                                            commandPokemon[currentPokemon] =
+                                                                                SaveData.currentSave.PC.boxes[0][
+                                                                                    pokePartyPosition];
+                                                                            runState = false;
+                                                                            updateCurrentTask(-1);
+                                                                            SfxHandler.Play(selectClip);
+                                                                            yield return new WaitForSeconds(0.2f);
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            yield return
+                                                                                StartCoroutine(
+                                                                                    drawTextAndWait(
+                                                                                        SaveData.currentSave.PC.boxes[0][
+                                                                                            pokePartyPosition].getName() +
+                                                                                        " is already fighting!"));
+                                                                            Dialog.UndrawDialogBox();
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        yield return
+                                                                            StartCoroutine(
+                                                                                drawTextAndWait(
+                                                                                    SaveData.currentSave.PC.boxes[0][
+                                                                                        pokePartyPosition].getName() +
+                                                                                    " is unable to fight!"));
+                                                                        Dialog.UndrawDialogBox();
+                                                                    }
+                                                                }
+                                                                else if (movesPosition == 5)
+                                                                {
+                                                                    //check summary
+                                                                    updateCurrentTask(5);
+                                                                    SfxHandler.Play(selectClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                                else if (movesPosition == 6)
+                                                                {
+                                                                    //back
+                                                                    updateCurrentTask(3);
+                                                                    SfxHandler.Play(selectClip);
+                                                                    yield return new WaitForSeconds(0.2f);
+                                                                }
+                                                            }
+                                                            else if (Input.GetButtonDown("Back"))
+                                                            {
+                                                                updateCurrentTask(3);
+                                                                SfxHandler.Play(selectClip);
+                                                                yield return new WaitForSeconds(0.2f);
+                                                            }
+
+                                                            yield return null;
+                                                        }
+                                                    }
+                                                    else if (summaryPosition == 2)
+                                                    {
+                                                        //back
                                                         updateCurrentTask(3);
                                                         SfxHandler.Play(selectClip);
                                                         yield return new WaitForSeconds(0.2f);
                                                     }
-
-                                                    yield return null;
                                                 }
-                                            }
-                                            else if (summaryPosition == 2)
-                                            {
-//back
-                                                updateCurrentTask(3);
-                                                SfxHandler.Play(selectClip);
-                                                yield return new WaitForSeconds(0.2f);
-                                            }
-                                        }
-                                        else if (Input.GetButtonDown("Back"))
-                                        {
-                                            updateCurrentTask(3);
-                                            SfxHandler.Play(selectClip);
-                                            yield return new WaitForSeconds(0.2f);
-                                        }
+                                                else if (Input.GetButtonDown("Back"))
+                                                {
+                                                    updateCurrentTask(3);
+                                                    SfxHandler.Play(selectClip);
+                                                    yield return new WaitForSeconds(0.2f);
+                                                }
 
-                                        yield return null;
+                                                yield return null;
+                                            }
+                                        }
                                     }
+                                    else if (Input.GetButtonDown("Back"))
+                                    {
+                                        SfxHandler.Play(selectClip);
+                                        updateCurrentTask(0);
+                                    }
+
+                                    yield return null;
                                 }
                             }
-                            else if (Input.GetButtonDown("Back"))
-                            {
-                                SfxHandler.Play(selectClip);
-                                updateCurrentTask(0);
-                            }
-
-                            yield return null;
-                        }
+                            break;
                     }
                 }
                 else if (Input.GetButtonDown("Back"))
@@ -4693,56 +5044,23 @@ public class BattleHandler : MonoBehaviour
 
                 yield return null;
             }
-
-
+            #endregion
             ////////////////////////////////////////
             /// AI turn selection
             ////////////////////////////////////////
 
-            //AI not yet implemented properly.
-            //the following code randomly chooses a move to use with no further thought.
-            for (int i = 0; i < pokemonPerSide; i++)
-            {
-                //do for every pokemon on enemy side
-                int pi = i + 3;
-                if (pokemon[pi] != null)
-                {
-                    //check if struggle is to be used (no PP left in any move)
-                    if (pokemon[pi].getPP(0) == 0 && pokemon[pi].getPP(1) == 0 &&
-                        pokemon[pi].getPP(2) == 0 && pokemon[pi].getPP(3) == 0)
-                    {
-                        commandMove[pi] = MoveDatabase.getMove("Struggle");
-                    }
-                    else
-                    {
-                        //Randomly choose a move from the moveset
-                        int AImoveIndex = Random.Range(0, 4);
-                        while (pokemonMoveset[pi] != null && string.IsNullOrEmpty(pokemonMoveset[pi][AImoveIndex]) &&
-                               pokemon[pi].getPP(AImoveIndex) == 0)
-                        {
-                            AImoveIndex = Random.Range(0, 4);
-                        }
-                        command[pi] = CommandType.Move;
-                        commandMove[pi] = MoveDatabase.getMove(pokemonMoveset[pi][AImoveIndex]);
-                        Debug.Log(commandMove[pi].getName() + ", PP: " + pokemon[pi].getPP(AImoveIndex));
-                    }
-                }
-            }
-
-
-            yield return new WaitForSeconds(0.3f);
+            yield return AITurnSelection();
 
             ////////////////////////////////////////
             /// Battle State
             ////////////////////////////////////////
 
-
+            #region
             //for each pokemon on field, in order of speed/priority, run their command
             for (int i = 0; i < 6; i++)
             {
                 if (running)
-                {
-                    //running may be set to false by a flee command
+                {   //running may be set to false by a flee command
                     int movingPokemon = getHighestSpeedIndex();
                     if (pokemon[movingPokemon] != null)
                     {
@@ -4753,28 +5071,9 @@ public class BattleHandler : MonoBehaviour
                             {
                                 //player attemps escape
                                 playerFleeAttempts += 1;
-
-                                int fleeChance = (pokemon[movingPokemon].getSPE() * 128) / pokemon[3].getSPE() +
-                                                 30 * playerFleeAttempts;
-                                if (Random.Range(0, 256) < fleeChance)
-                                {
-                                    running = false;
-
-                                    SfxHandler.Play(runClip);
-                                    Dialog.DrawDialogBox();
-                                    yield return StartCoroutine(Dialog.DrawTextSilent("Got away safely!"));
-                                    while (!Input.GetButtonDown("Select") && !Input.GetButtonDown("Back"))
-                                    {
-                                        yield return null;
-                                    }
-                                    Dialog.UndrawDialogBox();
-                                }
-                                else
-                                {
-                                    yield return StartCoroutine(drawTextAndWait("Can't escape!"));
-                                }
+                                running = UpdateRunningAfterFlee(movingPokemon, playerFleeAttempts);
+                                yield return RunFromBattleAnimation(running);
                             }
-
                             pokemonHasMoved[movingPokemon] = true;
                         }
                         else if (command[movingPokemon] == CommandType.Item)
@@ -4788,123 +5087,36 @@ public class BattleHandler : MonoBehaviour
                                 {
                                     //debug autoselect targetIndex (target selection not yet implemented)
                                     int targetIndex = 3;
-                                    //
-
-                                    //pokeball animation not yet implemented
-                                    yield return
-                                        StartCoroutine(
-                                            drawTextAndWait(
-                                                SaveData.currentSave.playerName + " used one " +
-                                                commandItem[movingPokemon].getName() + "!", 2.4f));
-                                    yield return new WaitForSeconds(1.2f);
-                                    if (trainerBattle)
-                                    {
-                                        yield return
-                                            StartCoroutine(drawTextAndWait("The trainer blocked the ball!", 2.4f));
-                                        yield return StartCoroutine(drawTextAndWait("Don't be a theif!", 2.4f));
-                                    }
+                                    yield return PokeballThrowAnimation(movingPokemon, trainerBattle);
                                     //calculate catch chance
-                                    else
+                                    if (!trainerBattle)
                                     {
-                                        float ballRate = (float) commandItem[movingPokemon].getFloatParameter();
-                                        float catchRate =
-                                            (float)
-                                            PokemonDatabase.getPokemon(pokemon[targetIndex].getID()).getCatchRate();
-                                        float statusRate = 1f;
-                                        if ((pokemon[targetIndex].getStatus() != Pokemon.Status.NONE))
-                                        {
-                                            statusRate = (pokemon[targetIndex].getStatus() == Pokemon.Status.ASLEEP ||
-                                                          pokemon[targetIndex].getStatus() == Pokemon.Status.FROZEN)
-                                                ? 2.5f
-                                                : 1.5f;
-                                        }
-
-                                        int modifiedRate =
-                                            Mathf.FloorToInt(((3 * (float) pokemon[targetIndex].getHP() -
-                                                               2 * (float) pokemon[targetIndex].getCurrentHP())
-                                                              * catchRate * ballRate) /
-                                                             (3 * (float) pokemon[targetIndex].getHP()) * statusRate);
-
-                                        Debug.Log("modifiedRate: " + modifiedRate);
-
-                                        //GEN VI
-                                        //int shakeProbability = Mathf.FloorToInt(65536f / Mathf.Pow((255f/modifiedRate),0.1875f));
-                                        //GEN V
-                                        int shakeProbability =
-                                            Mathf.FloorToInt(65536f / Mathf.Sqrt(Mathf.Sqrt(255f / modifiedRate)));
-
-                                        int shakes = 0;
-
-                                        string debugString = "";
-                                        for (int shake = 0; shake < 4; shake++)
-                                        {
-                                            int shakeCheck = Random.Range(0, 65535);
-                                            debugString += shake + ":(" + shakeCheck + "<" + shakeProbability + ")? ";
-                                            if (shakeCheck < shakeProbability)
-                                            {
-                                                debugString += "Pass.   ";
-                                                shakes += 1;
-                                            }
-                                            else
-                                            {
-                                                debugString += "Fail.   ";
-                                                shake = 4;
-                                            }
-                                        }
-                                        Debug.Log("(" + shakes + ")" + debugString);
-
+                                        int shakeProbability = GetShakeProbability(targetIndex, movingPokemon);
+                                        int shakes = GetNumberOfShakes(shakeProbability);
                                         if (shakes == 4)
                                         {
                                             Debug.Log("Caught the " + pokemon[targetIndex].getName());
                                             running = false;
 
                                             //pokeball animation not yet implemented
-                                            yield return StartCoroutine(faintPokemonAnimation(opponent1));
-                                            yield return new WaitForSeconds(1f);
-
-                                            yield return
-                                                StartCoroutine(
-                                                    drawTextAndWait(
-                                                        generatePreString(targetIndex) + pokemon[targetIndex].getName() +
-                                                        " \\nwas caught!", 2.4f));
-
-                                            Dialog.DrawDialogBox();
-                                            yield return
-                                                StartCoroutine(
-                                                    Dialog.DrawTextSilent(
-                                                        "Would you like to give a nickname \\nto your new " +
-                                                        pokemon[targetIndex].getName() + "?"));
-                                            yield return StartCoroutine(Dialog.DrawChoiceBox());
+                                            yield return SuccessfulPokeballAnimation(targetIndex);
                                             int chosenIndex = Dialog.chosenIndex;
-                                            Dialog.UndrawDialogBox();
-                                            Dialog.UndrawChoiceBox();
+                                            Debug.Log(chosenIndex);
 
                                             string nickname = null;
                                             if (chosenIndex == 1)
                                             {
                                                 //give nickname
-                                                SfxHandler.Play(selectClip);
-                                                yield return StartCoroutine(ScreenFade.main.Fade(false, 0.4f));
-
-                                                Scene.main.Typing.gameObject.SetActive(true);
-                                                StartCoroutine(Scene.main.Typing.control(10, "",
-                                                    pokemon[targetIndex].getGender(), pokemon[targetIndex].GetIcons_()));
-                                                while (Scene.main.Typing.gameObject.activeSelf)
-                                                {
-                                                    yield return null;
-                                                }
+                                                yield return GiveNicknameAnimation(targetIndex);
                                                 if (Scene.main.Typing.typedString.Length > 0)
                                                 {
                                                     nickname = Scene.main.Typing.typedString;
                                                 }
-
-                                                yield return StartCoroutine(ScreenFade.main.Fade(true, 0.4f));
                                             }
-                                            Debug.Log("CurrentHP" + pokemon[targetIndex].getCurrentHP());
+                                            Debug.Log("CurrentHP: " + pokemon[targetIndex].getCurrentHP());
                                             SaveData.currentSave.PC.addPokemon(new Pokemon(pokemon[targetIndex],
                                                 nickname, commandItem[movingPokemon].getName()));
                                         }
-
                                         Dialog.UndrawDialogBox();
                                     }
                                 }
@@ -4941,20 +5153,14 @@ public class BattleHandler : MonoBehaviour
                                 else
                                 {
                                     //undefined effect
-                                    yield return
-                                        StartCoroutine(
-                                            drawTextAndWait(
-                                                SaveData.currentSave.playerName + " used " +
-                                                commandItem[movingPokemon].getName() + "!", 2.4f));
+                                    yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + 
+                                        " used " + commandItem[movingPokemon].getName() + "!", 2.4f));
                                 }
                             }
                             else
                             {
-                                yield return
-                                    StartCoroutine(
-                                        drawTextAndWait(
-                                            opponentName + " used " + commandItem[movingPokemon].getName() + "!", 2.4f))
-                                    ;
+                                yield return StartCoroutine(drawTextAndWait(
+                                    opponentName + " used " + commandItem[movingPokemon].getName() + "!", 2.4f));
                             }
 
                             pokemonHasMoved[movingPokemon] = true;
@@ -5075,27 +5281,19 @@ public class BattleHandler : MonoBehaviour
                                     //check for move effects that change how damage is calculated (Heal / Set Damage / etc.) (not yet implemented fully)
                                     if (commandMove[movingPokemon].hasMoveEffect(MoveData.Effect.Heal))
                                     {
-                                        yield return
-                                            StartCoroutine(Heal(targetIndex,
-                                                commandMove[movingPokemon].getMoveParameter(MoveData.Effect.Heal)));
+                                        yield return StartCoroutine(Heal(targetIndex, 
+                                            commandMove[movingPokemon].getMoveParameter(MoveData.Effect.Heal)));
                                     }
                                     else if (commandMove[movingPokemon].hasMoveEffect(MoveData.Effect.SetDamage))
-                                    {
-                                        damageToDeal =
-                                            commandMove[movingPokemon].getMoveParameter(MoveData.Effect.SetDamage);
+                                    {   // For moves that must do a certain amount of damage(think Sonicboom, Dragon Rage)
+                                        damageToDeal = commandMove[movingPokemon].getMoveParameter(MoveData.Effect.SetDamage);
                                         //if parameter is 0, then use the pokemon's level
                                         if (damageToDeal == 0)
                                         {
                                             damageToDeal = pokemon[movingPokemon].getLevel();
                                         }
                                         //check for any ineffectivity
-                                        superEffectiveModifier =
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType1[targetIndex]) *
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType2[targetIndex]) *
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType3[targetIndex]);
+                                        superEffectiveModifier = SuperEffectiveModifier(movingPokemon, targetIndex);
                                         //if able to hit, set to 1 to prevent super effective messages appearing
                                         if (superEffectiveModifier > 0f)
                                         {
@@ -5105,75 +5303,16 @@ public class BattleHandler : MonoBehaviour
                                     else
                                     {
                                         //calculate damage
-                                        damageToDeal = calculateDamage(movingPokemon, targetIndex,
-                                            commandMove[movingPokemon]);
-                                        applyCritical = calculateCritical(movingPokemon, targetIndex,
-                                            commandMove[movingPokemon]);
+                                        damageToDeal = calculateDamage(movingPokemon, targetIndex, commandMove[movingPokemon]);
+                                        applyCritical = calculateCritical(movingPokemon, targetIndex, commandMove[movingPokemon]);
                                         if (applyCritical)
                                         {
                                             damageToDeal *= 1.5f;
                                         }
-                                        superEffectiveModifier =
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType1[targetIndex]) *
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType2[targetIndex]) *
-                                            getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
-                                                pokemonType3[targetIndex]);
+                                        superEffectiveModifier = SuperEffectiveModifier(movingPokemon, targetIndex);
                                         damageToDeal *= superEffectiveModifier;
                                         //apply offense/defense boosts.
-                                        //float damageBeforeMods = damageToDeal;
-                                        if (commandMove[movingPokemon].getCategory() == MoveData.Category.PHYSICAL)
-                                        {
-                                            if (applyCritical)
-                                            {
-                                                //if a critical lands
-                                                if (pokemonStatsMod[0][movingPokemon] > 0)
-                                                {
-                                                    //only apply ATKmod if positive
-                                                    damageToDeal *=
-                                                        calculateStatModifier(pokemonStatsMod[0][movingPokemon]);
-                                                }
-                                                if (pokemonStatsMod[1][targetIndex] < 0)
-                                                {
-                                                    //only apply DEFmod if negative
-                                                    damageToDeal *=
-                                                        calculateStatModifier(pokemonStatsMod[1][targetIndex]);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                //apply ATK and DEF mods normally (also half damage if burned)
-                                                damageToDeal *= calculateStatModifier(pokemonStatsMod[0][movingPokemon]);
-                                                damageToDeal /= calculateStatModifier(pokemonStatsMod[1][targetIndex]);
-                                                if (pokemon[movingPokemon].getStatus() == Pokemon.Status.BURNED)
-                                                {
-                                                    damageToDeal /= 2f;
-                                                }
-                                            }
-                                        }
-                                        else if (commandMove[movingPokemon].getCategory() == MoveData.Category.SPECIAL)
-                                        {
-                                            if (applyCritical)
-                                            {
-                                                //same as above, only using the Special varients
-                                                if (pokemonStatsMod[2][movingPokemon] > 0)
-                                                {
-                                                    damageToDeal *=
-                                                        calculateStatModifier(pokemonStatsMod[2][movingPokemon]);
-                                                }
-                                                if (pokemonStatsMod[3][targetIndex] < 0)
-                                                {
-                                                    damageToDeal *=
-                                                        calculateStatModifier(pokemonStatsMod[3][targetIndex]);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                damageToDeal *= calculateStatModifier(pokemonStatsMod[2][movingPokemon]);
-                                                damageToDeal /= calculateStatModifier(pokemonStatsMod[3][targetIndex]);
-                                            }
-                                        }
+                                        damageToDeal *= ApplyStatBoosts(applyCritical, movingPokemon, targetIndex);
                                     }
 
                                     //inflict damage
@@ -5189,7 +5328,7 @@ public class BattleHandler : MonoBehaviour
                                             SfxHandler.Play(hitSuperClip);
                                         }
                                         else if (superEffectiveModifier < 0.99f)
-                                        {
+                                        {   // Should test if < 1.0f is sufficient
                                             SfxHandler.Play(hitPoorClip);
                                         }
                                         else
@@ -5201,18 +5340,15 @@ public class BattleHandler : MonoBehaviour
                                     if (targetIndex == 0)
                                     {
                                         //if player pokemon 0 (only stats bar to display HP text)
-                                        yield return
-                                            StartCoroutine(stretchBar(statsHPBar[targetIndex],
-                                                Mathf.CeilToInt(pokemon[targetIndex].getPercentHP() * 48f), 32f, true,
-                                                pokemon0CurrentHP, pokemon0CurrentHPShadow,
-                                                pokemon[targetIndex].getCurrentHP()));
+                                        yield return StartCoroutine(stretchBar(statsHPBar[targetIndex],
+                                            Mathf.CeilToInt(pokemon[targetIndex].getPercentHP() * 48f), 32f, true,
+                                            pokemon0CurrentHP, pokemon0CurrentHPShadow, pokemon[targetIndex].getCurrentHP()));
                                     }
                                     else
                                     {
-                                        yield return
-                                            StartCoroutine(stretchBar(statsHPBar[targetIndex],
-                                                Mathf.CeilToInt(pokemon[targetIndex].getPercentHP() * 48f), 32f, true,
-                                                null, null, 0));
+                                        yield return StartCoroutine(stretchBar(statsHPBar[targetIndex],
+                                            Mathf.CeilToInt(pokemon[targetIndex].getPercentHP() * 48f), 32f, true,
+                                            null, null, 0));
                                     }
                                     yield return new WaitForSeconds(0.4f);
 
@@ -5243,27 +5379,7 @@ public class BattleHandler : MonoBehaviour
                                     //Faint the target if nessecary
                                     if (pokemon[targetIndex].getStatus() == Pokemon.Status.FAINTED)
                                     {
-                                        //debug = array of GUITextures not yet implemented
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
-                                                    generatePreString(targetIndex) + pokemon[targetIndex].getName() +
-                                                    " fainted!", 2.4f));
-                                        Dialog.UndrawDialogBox();
-                                        yield return new WaitForSeconds(0.2f);
-                                        yield return new WaitForSeconds(PlayCry(pokemon[targetIndex]));
-                                        //flexible faint animtions not yet implemented
-                                        if (targetIndex == 0)
-                                        {
-                                            StartCoroutine(slidePokemonStats(0, true));
-                                            yield return StartCoroutine(faintPokemonAnimation(player1));
-                                        }
-                                        else if (targetIndex == 3)
-                                        {
-                                            StartCoroutine(slidePokemonStats(3, true));
-                                            yield return StartCoroutine(faintPokemonAnimation(opponent1));
-                                        }
-
+                                        yield return FaintAnimations(targetIndex);  
                                         //give EXP / add EXP
                                         if (targetIndex > 2)
                                         {
@@ -5272,32 +5388,20 @@ public class BattleHandler : MonoBehaviour
                                                 if (pokemon[i2].getStatus() != Pokemon.Status.FAINTED)
                                                 {
                                                     float isWildMod = (trainerBattle) ? 1.5f : 1f;
-                                                    float baseExpYield =
-                                                        PokemonDatabase.getPokemon(pokemon[targetIndex].getID())
-                                                            .getBaseExpYield();
+                                                    float baseExpYield = PokemonDatabase.getPokemon(
+                                                        pokemon[targetIndex].getID()).getBaseExpYield();
                                                     float luckyEggMod = (pokemon[i2].getHeldItem() == "Lucky Egg")
-                                                        ? 1.5f
-                                                        : 1f;
+                                                        ? 1.5f : 1f;
                                                     float OTMod = (pokemon[i2].getIDno() !=
-                                                                   SaveData.currentSave.playerID)
-                                                        ? 1.5f
-                                                        : 1f;
+                                                            SaveData.currentSave.playerID) ? 1.5f : 1f;
                                                     float sharedMod = 1f; //shared experience
-                                                    float IVMod = 0.85f +
-                                                                  (float)
-                                                                  (pokemon[targetIndex].getIV_HP() +
-                                                                   pokemon[targetIndex].getIV_ATK() +
-                                                                   pokemon[targetIndex].getIV_DEF() +
-                                                                   pokemon[targetIndex].getIV_SPA() +
-                                                                   pokemon[targetIndex].getIV_SPD() +
-                                                                   pokemon[targetIndex].getIV_SPE()) / 480f;
+                                                    float IVMod = 0.85f + (float) (pokemon[targetIndex].getIV_HP() +
+                                                        pokemon[targetIndex].getIV_ATK() + pokemon[targetIndex].getIV_DEF() +
+                                                        pokemon[targetIndex].getIV_SPA() + pokemon[targetIndex].getIV_SPD() +
+                                                        pokemon[targetIndex].getIV_SPE()) / 480f;
                                                     //IV Mod is unique to Pokemon Unity
-                                                    int exp =
-                                                        Mathf.CeilToInt((isWildMod * baseExpYield * IVMod * OTMod *
-                                                                         luckyEggMod *
-                                                                         (float) pokemon[targetIndex].getLevel()) / 7 *
-                                                                        sharedMod);
-
+                                                    int exp = Mathf.CeilToInt((isWildMod * baseExpYield * IVMod * OTMod * 
+                                                        luckyEggMod * (float) pokemon[targetIndex].getLevel()) / 7 * sharedMod);
                                                     yield return StartCoroutine(addExp(i2, exp));
                                                 }
                                             }
@@ -5332,13 +5436,7 @@ public class BattleHandler : MonoBehaviour
                                             //Check these booleans to prevent running an animation twice for one pokemon.
                                             bool animate = false;
                                             //check if statUp/Down Effect
-                                            if (moveEffects[i2] == MoveData.Effect.ATK ||
-                                                moveEffects[i2] == MoveData.Effect.DEF ||
-                                                moveEffects[i2] == MoveData.Effect.SPA ||
-                                                moveEffects[i2] == MoveData.Effect.SPD ||
-                                                moveEffects[i2] == MoveData.Effect.SPE ||
-                                                moveEffects[i2] == MoveData.Effect.ACC ||
-                                                moveEffects[i2] == MoveData.Effect.EVA)
+                                            if (CheckEffects(false, i2, moveEffects))
                                             {
                                                 //if statUp, and haven't run statUp yet, set statUpRun bool to true;
                                                 if (moveEffectParameters[i2] > 0 && !statUpRun)
@@ -5353,13 +5451,7 @@ public class BattleHandler : MonoBehaviour
                                                 }
                                             }
                                             //check if Self statUp/Down Effect
-                                            else if (moveEffects[i2] == MoveData.Effect.ATKself ||
-                                                     moveEffects[i2] == MoveData.Effect.DEFself ||
-                                                     moveEffects[i2] == MoveData.Effect.SPAself ||
-                                                     moveEffects[i2] == MoveData.Effect.SPDself ||
-                                                     moveEffects[i2] == MoveData.Effect.SPEself ||
-                                                     moveEffects[i2] == MoveData.Effect.ACCself ||
-                                                     moveEffects[i2] == MoveData.Effect.EVAself)
+                                            else if (CheckEffects(true, i2, moveEffects))
                                             {
                                                 //if statUp, and haven't run statUp yet, set statUpRun bool to true;
                                                 if (moveEffectParameters[i2] > 0 && !statUpSelfRun)
@@ -5378,12 +5470,10 @@ public class BattleHandler : MonoBehaviour
                                                 animate = true;
                                             }
 
-                                            yield return
-                                                StartCoroutine(applyEffect(movingPokemon, targetIndex, moveEffects[i2],
-                                                    moveEffectParameters[i2], animate));
+                                            yield return StartCoroutine(applyEffect(movingPokemon, targetIndex, 
+                                                moveEffects[i2], moveEffectParameters[i2], animate));
                                         }
                                     }
-
                                     updatePokemonStatsDisplay(targetIndex);
                                 }
                             }
@@ -5391,41 +5481,8 @@ public class BattleHandler : MonoBehaviour
                             pokemonHasMoved[movingPokemon] = true;
                         }
                         else if (command[movingPokemon] == CommandType.Switch)
-                        {
-                            //switch pokemon
-                            //enemy switching not yet implemented
-
-                            yield return
-                                StartCoroutine(drawTextAndWait(pokemon[movingPokemon].getName() + ", come back!", 1.5f,
-                                    1.5f));
-                            Dialog.UndrawDialogBox();
-
-                            StartCoroutine(slidePokemonStats(0, true));
-                            yield return StartCoroutine(withdrawPokemon(player1));
-                            yield return new WaitForSeconds(0.5f);
-
-                            switchPokemon(movingPokemon, commandPokemon[movingPokemon]);
-
-                            yield return new WaitForSeconds(0.5f);
-                            yield return
-                                StartCoroutine(drawTextAndWait("Go! " + pokemon[movingPokemon].getName() + "!", 1.5f,
-                                    1.5f));
-                            Dialog.UndrawDialogBox();
-
-                            if (i == 0)
-                            {
-                                //DEBUG
-                                Debug.Log(pokemon[0].getLongID());
-                                StopCoroutine(animatePlayer1);
-                                animatePlayer1 = StartCoroutine(animatePokemon(player1, pokemon[0].GetBackAnim_()));
-                                yield return new WaitForSeconds(0.2f);
-                                updatePokemonStatsDisplay(i);
-                                yield return StartCoroutine(releasePokemon(player1));
-                                PlayCry(pokemon[0]);
-                                yield return new WaitForSeconds(0.3f);
-                                yield return StartCoroutine(slidePokemonStats(0, false));
-                            }
-                            pokemonHasMoved[movingPokemon] = true;
+                        {   // i is the for loop above iterating over all Pokemon in order of speed/priority
+                            yield return SwitchAnimations(i, movingPokemon);
                         }
                     }
                     else
@@ -5435,12 +5492,12 @@ public class BattleHandler : MonoBehaviour
                     }
                 }
             }
-
+            #endregion
 
             ////////////////////////////////////////
             /// After-Effects State
             ////////////////////////////////////////
-
+            #region
             if (running)
             {
                 //running may be set to false by a successful flee
@@ -5455,18 +5512,13 @@ public class BattleHandler : MonoBehaviour
                             pokemon[i].removeHP(Mathf.Floor((float) pokemon[i].getHP() / 8f));
                             if (pokemon[i].getStatus() == Pokemon.Status.BURNED)
                             {
-                                yield return
-                                    StartCoroutine(
-                                        drawTextAndWait(
-                                            generatePreString(i) + pokemon[i].getName() + " is hurt by its burn!", 2.4f))
-                                    ;
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(i) + pokemon[i].getName() + " is hurt by its burn!", 2.4f));
                             }
                             else if (pokemon[i].getStatus() == Pokemon.Status.POISONED)
                             {
-                                yield return
-                                    StartCoroutine(
-                                        drawTextAndWait(
-                                            generatePreString(i) + pokemon[i].getName() + " is hurt by poison!", 2.4f));
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(i) + pokemon[i].getName() + " is hurt by poison!", 2.4f));
                             }
 
                             SfxHandler.Play(hitClip);
@@ -5474,16 +5526,14 @@ public class BattleHandler : MonoBehaviour
                             if (i == 0)
                             {
                                 //if player pokemon 0 (only stats bar to display HP text)
-                                yield return
-                                    StartCoroutine(stretchBar(statsHPBar[i],
-                                        Mathf.CeilToInt(pokemon[i].getPercentHP() * 48f), 32f, true, pokemon0CurrentHP,
-                                        pokemon0CurrentHPShadow, pokemon[i].getCurrentHP()));
+                                yield return StartCoroutine(stretchBar(statsHPBar[i],
+                                    Mathf.CeilToInt(pokemon[i].getPercentHP() * 48f), 32f, true, pokemon0CurrentHP,
+                                    pokemon0CurrentHPShadow, pokemon[i].getCurrentHP()));
                             }
                             else
                             {
-                                yield return
-                                    StartCoroutine(stretchBar(statsHPBar[i],
-                                        Mathf.CeilToInt(pokemon[i].getPercentHP() * 48f), 32f, true, null, null, 0));
+                                yield return StartCoroutine(stretchBar(statsHPBar[i],
+                                    Mathf.CeilToInt(pokemon[i].getPercentHP() * 48f), 32f, true, null, null, 0));
                             }
                             yield return new WaitForSeconds(1.2f);
 
@@ -5495,8 +5545,7 @@ public class BattleHandler : MonoBehaviour
                         if (pokemon[i].getStatus() == Pokemon.Status.FAINTED)
                         {
                             //debug = array of GUITextures not yet implemented
-                            yield return
-                                StartCoroutine(drawTextAndWait(
+                            yield return StartCoroutine(drawTextAndWait(
                                     generatePreString(i) + pokemon[i].getName() + " fainted!", 2.4f));
                             Dialog.UndrawDialogBox();
                             yield return new WaitForSeconds(0.2f);
@@ -5517,12 +5566,12 @@ public class BattleHandler : MonoBehaviour
                     }
                 }
             }
-
+            #endregion
 
             ////////////////////////////////////////
             /// Replacement State
             ////////////////////////////////////////
-
+            #region
             if (running)
             {
                 //check if any opponents are left
@@ -5578,19 +5627,15 @@ public class BattleHandler : MonoBehaviour
                                     {
                                         switchPokemon(i + 3, opponentParty[i2]);
 
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
-                                                    opponentName + " sent out " + pokemon[i + 3].getName() + "!", 1.5f,
-                                                    1.5f));
+                                        yield return StartCoroutine(drawTextAndWait(opponentName + 
+                                            " sent out " + pokemon[i + 3].getName() + "!", 1.5f, 1.5f));
                                         Dialog.UndrawDialogBox();
                                         if (i == 0)
                                         {
                                             //DEBUG
                                             Debug.Log(pokemon[3].getLongID());
                                             StopCoroutine(animateOpponent1);
-                                            animateOpponent1 =
-                                                StartCoroutine(animatePokemon(opponent1, pokemon[3].GetFrontAnim_()));
+                                            animateOpponent1 = StartCoroutine(animatePokemon(opponent1, pokemon[3].GetFrontAnim_()));
                                             yield return new WaitForSeconds(0.2f);
                                             updatePokemonStatsDisplay(i + 3);
                                             yield return StartCoroutine(releasePokemon(opponent1));
@@ -5613,7 +5658,6 @@ public class BattleHandler : MonoBehaviour
                         if (pokemon[i] == null)
                         {
                             Dialog.UndrawDialogBox();
-
                             updateCurrentTask(3);
                             updateSelectedPokemonSlot(pokePartyPosition, false);
                             yield return new WaitForSeconds(0.2f);
@@ -6027,7 +6071,6 @@ public class BattleHandler : MonoBehaviour
                     victor = 0;
                 }
 
-
                 if (victor == 0)
                 {
                     if (trainerBattle)
@@ -6041,11 +6084,8 @@ public class BattleHandler : MonoBehaviour
                             BgmHandler.main.PlayOverlay(trainer.victoryBGM, trainer.victorySamplesLoopStart);
                         }
 
-
-                        yield return
-                            StartCoroutine(
-                                drawTextAndWait(SaveData.currentSave.playerName + " defeated " + opponentName + "!",
-                                    2.4f, 2.4f));
+                        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + 
+                            " defeated " + opponentName + "!", 2.4f, 2.4f));
                         Dialog.UndrawDialogBox();
                         yield return StartCoroutine(slideTrainer(opponentBase, trainerSprite1, true, false));
                         for (int di = 0; di < trainer.playerVictoryDialog.Length; di++)
@@ -6055,9 +6095,8 @@ public class BattleHandler : MonoBehaviour
                         Dialog.UndrawDialogBox();
 
                         yield return
-                            StartCoroutine(
-                                drawTextAndWait(SaveData.currentSave.playerName + " received $" +
-                                                trainer.GetPrizeMoney() + " for winning!"));
+                            StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + 
+                            " received $" + trainer.GetPrizeMoney() + " for winning!"));
                         SaveData.currentSave.playerMoney += trainer.GetPrizeMoney();
                     }
                     else
@@ -6097,17 +6136,14 @@ public class BattleHandler : MonoBehaviour
                     }
                     else
                     {
-                        yield return
-                            StartCoroutine(
-                                drawTextAndWait(SaveData.currentSave.playerName + " is out of usable Pokémon!", 2f));
-                        yield return
-                            StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + " dropped $200 in panic!",
-                                2f));
+                        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + 
+                            " is out of usable Pokémon!", 2f));
+                        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
+                            " dropped $200 in panic!", 2f));
                         yield return StartCoroutine(drawTextAndWait("... ... ... ...", 2f));
 
-                        yield return
-                            StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName + " blacked out!", 1.8f, 1.8f))
-                            ;
+                        yield return StartCoroutine(drawTextAndWait(SaveData.currentSave.playerName +
+                            " blacked out!", 1.8f, 1.8f));
                         Dialog.UndrawDialogBox();
                         //overlayed dialog box not yet implemented
                         StartCoroutine(ScreenFade.main.Fade(false, 1f));
@@ -6127,6 +6163,7 @@ public class BattleHandler : MonoBehaviour
                 Dialog.UndrawDialogBox();
                 yield return new WaitForSeconds(0.4f);
             }
+            #endregion
         }
 
 
@@ -6147,32 +6184,8 @@ public class BattleHandler : MonoBehaviour
         //check for evolutions to run ONLY if won, or healed on defeat
         if (victor == 0 || healedOnDefeat)
         {
-            for (int i = 0; i < initialLevels.Length; i++)
-            {
-                if (SaveData.currentSave.PC.boxes[0][i] != null)
-                {
-                    //if level is different to it was at the start of the battle
-                    if (SaveData.currentSave.PC.boxes[0][i].getLevel() != initialLevels[i])
-                    {
-                        //if can evolve
-                        if (SaveData.currentSave.PC.boxes[0][i].canEvolve("Level"))
-                        {
-                            BgmHandler.main.PlayOverlay(null, 0, 0);
-
-                            //Set SceneEvolution to be active so that it appears
-                            Scene.main.Evolution.gameObject.SetActive(true);
-                            StartCoroutine(Scene.main.Evolution.control(SaveData.currentSave.PC.boxes[0][i], "Level"));
-                            //Start an empty loop that will only stop when SceneEvolution is no longer active (is closed)
-                            while (Scene.main.Evolution.gameObject.activeSelf)
-                            {
-                                yield return null;
-                            }
-                        }
-                    }
-                }
-            }
+            yield return CheckEvolutions(initialLevels);
         }
-
 
         //if defeated
         if (victor == 1)
