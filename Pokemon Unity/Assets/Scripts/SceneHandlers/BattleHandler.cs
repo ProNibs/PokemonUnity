@@ -3025,7 +3025,6 @@ public class BattleHandler : MonoBehaviour
         }
     }
 
-
     private void updatePokemonStats(int position)
     {
         //set PokemonData
@@ -3209,9 +3208,7 @@ public class BattleHandler : MonoBehaviour
         if (pokemonStatsMod[statIndex][targetPosition] >= 6 && parameter > 0)
         {
             //can't go higher
-            yield return
-                StartCoroutine(
-                    drawTextAndWait(
+            yield return StartCoroutine(drawTextAndWait(
                         generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                         statName[statIndex] + " \\nwon't go any higher!", 2.4f));
             canModify = false;
@@ -3219,9 +3216,7 @@ public class BattleHandler : MonoBehaviour
         else if (pokemonStatsMod[statIndex][targetPosition] <= -6 && parameter < 0)
         {
             //can't go lower
-            yield return
-                StartCoroutine(
-                    drawTextAndWait(
+            yield return StartCoroutine(drawTextAndWait(
                         generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                         statName[statIndex] + " won't go any lower!", 2.4f));
             canModify = false;
@@ -3259,49 +3254,37 @@ public class BattleHandler : MonoBehaviour
 
             if (parameter == 1)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " \\nrose!", 2.4f));
             }
             else if (parameter == -1)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " \\nfell!", 2.4f));
             }
             else if (parameter == 2)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " \\nrose sharply!", 2.4f));
             }
             else if (parameter == -2)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " \\nharshly fell!", 2.4f));
             }
             else if (parameter >= 3)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " nrose drastically!", 2.4f));
             }
             else if (parameter <= -3)
             {
-                yield return
-                    StartCoroutine(
-                        drawTextAndWait(
+                yield return StartCoroutine(drawTextAndWait(
                             generatePreString(targetPosition) + pokemon[targetPosition].getName() + "'s " +
                             statName[statIndex] + " \\nseverely fell!", 2.4f));
             }
@@ -3930,7 +3913,54 @@ public class BattleHandler : MonoBehaviour
     }
     #endregion
 
-#endregion
+    ///////////
+    //  Ability Functions
+    ///////////
+    #region
+    private IEnumerator OnStartAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.ON_ENTRY)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                        " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                Dialog.UndrawDialogBox();
+            }
+        }
+    }
+
+    private int[] GetTargets(Target target, int User)
+    {   // Only returns single-value arrays, but expandable once double-battles+ integrated.
+        int i = 0;   // Default for Player's Pokemon as Target
+        int[] ReturnArray;
+        if (User < 3)   
+        {   // User is actually the Enemy's Pokemon
+            i = 3;
+        }
+        switch (target)
+        {   // Only enterring for two possible choices
+            case Target.ALLADJACENTOPPONENT:
+            case Target.ADJACENTOPPONENT:
+            case Target.ALLOPPONENT:
+                ReturnArray = new int[] { i };  // Would update this to { i, i+1, i+2 }!(ALLOPPONENT)
+                break;
+            case Target.ADJACENTALLYSELF:
+            case Target.SELF:
+                ReturnArray = new int[] { User };
+                break;
+            default:
+                ReturnArray = new int[] { 6 }; // 6 = null (helping hand doesn't work) 
+                break;
+        }
+        //Debug.Log("<color=green>" + ReturnArray[0] + "</color>");
+        return ReturnArray;
+    }
+    #endregion
+    #endregion
 
     /// Basic Wild Battle
     public IEnumerator control(Pokemon wildPokemon)
@@ -4050,15 +4080,10 @@ public class BattleHandler : MonoBehaviour
         // Before updating task, check for on-switch effects
         // A Pokemon.getAbility()
         //pokemonStatsMod[3]
-        yield return drawTextAndWait(
-                generatePreString(0) + pokemon[0].getName() +
-                " used " + pokemon[0].getAbilityName() + "!", 0.25f, 0.5f);
-        yield return animateOverlayer(opponent1Overlay, overlayStatDownTex, 1f, 0, 1.2f, 0.3f);
-        Debug.Log(AbilityDatabase.getAbilityDescription(pokemon[0].getAbilityName()));
-
-        yield return new WaitForSeconds(0.25f);
-        Dialog.UndrawDialogBox();
-
+        AbilityData allyAbility = AbilityDatabase.getAbility(pokemon[0].getAbilityName());
+        AbilityData enemyAbility = AbilityDatabase.getAbility(pokemon[3].getAbilityName());
+        yield return OnStartAbilities(allyAbility, 0);
+        yield return OnStartAbilities(enemyAbility, 3);
         updateCurrentTask(0);
 
         int playerFleeAttempts = 0;
@@ -5565,7 +5590,7 @@ public class BattleHandler : MonoBehaviour
                 }
             }
             #endregion
-
+            Debug.Log("Enemy Modified Attack, After-Effects State: " + pokemonStatsMod[0][3]);
             ////////////////////////////////////////
             /// Replacement State
             ////////////////////////////////////////

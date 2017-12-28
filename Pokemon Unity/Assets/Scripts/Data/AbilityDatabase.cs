@@ -20,8 +20,6 @@ public class AbilityDatabase
     // To make it easier to simply give a name and get Ability info
     public static AbilityData getAbility(string name)
     {
-        Debug.Log("Get ability name called.");
-
         for (int i=0; i < ability.Length; i++)
         {
             if (ability[i].getName() == name)
