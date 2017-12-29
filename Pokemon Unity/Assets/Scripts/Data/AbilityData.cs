@@ -29,13 +29,14 @@ public class AbilityData
         HAVE_HELD_ITEM,
         WEATHER,
         STATUS,     // Hold a current status
+        ON_KO,      // If would KO from 100% to 0%
         PHYSICAL,   // This refers to any move deemed Physical
         CONTACT,    // This refers to physical contact moves (not all Physical are contact)
         CRITICAL,
         FLINCH,
         TYPE,
         WHEN_HIT,
-        STAT_THRESHOLD,
+        HP_THRESHOLD,
     };
 
     public enum Action
@@ -67,34 +68,57 @@ public class AbilityData
     private bool OutOfBattleEffect; // If true, has out of battle effects
     private Target target;
     private Target target2;     // Only used when the target reqires another target's threshold
+    private Conditions condition;
+    private string conditionText;
     private Action action;
     private float actionNumber;     // Could be percentage chance for effect, could be threshold
                                     // Could indicate what to do for specific cases
     private string description;
 
 
-    // For single targetted Abilities
+    // For single targeted Abilities
     public AbilityData(string name, BattleOccurance battleOccurance, bool OutOfBattleEffect,
-        Target target1, Action action, float actionNumber, string description)
+        Target target1, Conditions condition,
+         Action action, float actionNumber, string description)
     {
         this.name = name;
         this.battleOccurance = battleOccurance;
         this.OutOfBattleEffect = OutOfBattleEffect;
         this.target = target1;
+        this.condition = condition;
+        this.conditionText = "";
         this.action = action;
         this.actionNumber = actionNumber;
         this.description = description;
     }
 
     public AbilityData(string name, BattleOccurance battleOccurance, bool OutOfBattleEffect,
-        Target target1, Target target2, Action action, float actionNumber, string description)
+        Target target1, Conditions condition, string conditionText,
+         Action action, float actionNumber, string description)
+    {
+        this.name = name;
+        this.battleOccurance = battleOccurance;
+        this.OutOfBattleEffect = OutOfBattleEffect;
+        this.target = target1;
+        this.condition = condition;
+        this.conditionText = conditionText;
+        this.action = action;
+        this.actionNumber = actionNumber;
+        this.description = description;
+    }
+
+    // For abilities that depend on enemy pokemon condition
+    public AbilityData(string name, BattleOccurance battleOccurance, bool OutOfBattleEffect,
+        Target target1, Target target2, Conditions condition, string conditionText, 
+        Action action, float actionNumber, string description)
     {
         this.name = name;
         this.battleOccurance = battleOccurance;
         this.OutOfBattleEffect = OutOfBattleEffect;
         this.target = target1;
         this.target2 = target2;
-        this.action = action;
+        this.condition = condition;
+        this.conditionText = conditionText;
         this.actionNumber = actionNumber;
         this.description = description;
     }
@@ -122,6 +146,11 @@ public class AbilityData
     public Target getTarget2()
     {
         return target2;
+    }
+
+    public Conditions getCondition()
+    {
+        return condition;
     }
 
     public Action getAction()
