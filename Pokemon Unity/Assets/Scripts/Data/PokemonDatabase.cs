@@ -716,7 +716,7 @@ public static class PokemonDatabase
             },
             new string[] {},
             new int[] {}, new string[] {}),
-        new PokemonData(197, "Umbreon", PokemonData.Type.DARK, PokemonData.Type.NONE, "Synchronize", null, "Inner Focus",
+        new PokemonData(197, "Umbreon", PokemonData.Type.DARK, PokemonData.Type.NONE, "Immunity", null, "Inner Focus",
             87.5f, 45, PokemonData.EggGroup.FIELD, PokemonData.EggGroup.NONE, 9180, 1, 27,
             184, PokemonData.LevelingRate.MEDIUMFAST, 0, 0, 0, 0, 2, 0, PokemonData.PokedexColor.BLACK, 35,
             "Moonlight",

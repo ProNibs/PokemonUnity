@@ -3050,117 +3050,97 @@ public class BattleHandler : MonoBehaviour
         {
             if (pokemon[targetPosition].getStatus() != Pokemon.Status.FAINTED)
             {
-                if (effect == MoveData.Effect.ATK)
+                switch (effect)
                 {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 0, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.DEF)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 1, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.SPA)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 2, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.SPD)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 3, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.SPE)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 4, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.ACC)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 5, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.EVA)
-                {
-                    yield return StartCoroutine(ModifyStat(targetPosition, 6, parameter, animate));
-                }
-                else if (effect == MoveData.Effect.Burn)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.BURNED))
+                    case MoveData.Effect.ATK:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 0, parameter, animate));
+                        break;
+                    case MoveData.Effect.DEF:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 1, parameter, animate));
+                        break;
+                    case MoveData.Effect.SPA:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 2, parameter, animate));
+                        break;
+                    case MoveData.Effect.SPD:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 3, parameter, animate));
+                        break;
+                    case MoveData.Effect.SPE:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 4, parameter, animate));
+                        break;
+                    case MoveData.Effect.ACC:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 5, parameter, animate));
+                        break;
+                    case MoveData.Effect.EVA:
+                        yield return StartCoroutine(ModifyStat(targetPosition, 6, parameter, animate));
+                        break;
+                    case MoveData.Effect.Burn:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " was burned!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.BURNED))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " was burned!", 2.4f));
+                            }
                         }
-                    }
-                }
-                else if (effect == MoveData.Effect.Freeze)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.FROZEN))
+                        break;
+                    case MoveData.Effect.Freeze:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " was frozen solid!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.FROZEN))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " was frozen solid!", 2.4f));
+                            }
                         }
-                    }
-                }
-                else if (effect == MoveData.Effect.Paralyze)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.PARALYZED))
+                        break;
+                    case MoveData.Effect.Paralyze:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " was paralyzed! \\nIt may be unable to move!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.PARALYZED))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " was paralyzed! \\nIt may be unable to move!", 2.4f));
+                            }
                         }
-                    }
-                }
-                else if (effect == MoveData.Effect.Poison)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.POISONED))
+                        break;
+                    case MoveData.Effect.Poison:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " was poisoned!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.POISONED))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " was poisoned!", 2.4f));
+                            }
                         }
-                    }
-                }
-                else if (effect == MoveData.Effect.Toxic)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.POISONED))
+                        break;
+                    case MoveData.Effect.Toxic:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " was badly posioned!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.POISONED))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " was badly posioned!", 2.4f));
+                            }
                         }
-                    }
-                }
-                else if (effect == MoveData.Effect.Sleep)
-                {
-                    if (Random.value <= parameter)
-                    {
-                        if (pokemon[targetPosition].setStatus(Pokemon.Status.ASLEEP))
+                        break;
+                    case MoveData.Effect.Sleep:
+                        if (Random.value <= parameter)
                         {
-                            yield return
-                                StartCoroutine(
-                                    drawTextAndWait(
-                                        generatePreString(targetPosition) + pokemon[targetPosition].getName() +
-                                        " fell asleep!", 2.4f));
+                            if (pokemon[targetPosition].setStatus(Pokemon.Status.ASLEEP))
+                            {
+                                yield return StartCoroutine(drawTextAndWait(
+                                    generatePreString(targetPosition) + pokemon[targetPosition].getName() +
+                                    " fell asleep!", 2.4f));
+                            }
                         }
-                    }
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -3472,7 +3452,31 @@ public class BattleHandler : MonoBehaviour
         return preString;
     }
 
-
+    private IEnumerator displayImmunityText(int usingIndex, string Immunity)
+    {
+        switch(Immunity)
+        {
+            case "Poison":
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " cannot be poisoned!", 2.4f);
+                break;
+            case "Paralyze":
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " cannot be paralyzed!", 2.4f);
+                break;
+            case "Burn":
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " cannot be burned!", 2.4f);
+                break;
+            case "Frozen":
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " cannot be frozen!", 2.4f);
+                break;
+            default:
+                Debug.Log("Failed to display Immunity text");
+                break;
+        }
+    }
     private float PlayCry(Pokemon pokemon)
     {
         SfxHandler.Play(pokemon.GetCry(), pokemon.GetCryPitch());
@@ -3923,12 +3927,43 @@ public class BattleHandler : MonoBehaviour
         {
             int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
             {   // Animations required for Stat Down
-                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
-                        " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
-                yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
-                yield return new WaitForSeconds(statUpClip.length + 0.2f);
-                Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
-                Dialog.UndrawDialogBox();
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator ResistStatusAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.RESIST_STATUS)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.Poison:
+                        if (pokemon[usingIndex].getStatus() == Pokemon.Status.POISONED)
+                        {
+                            yield return displayImmunityText(usingIndex, "Poison");
+                            pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
+                        }
+                        Debug.Log("Is Poisoned?: " + pokemon[usingIndex].getStatus());
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
@@ -4083,7 +4118,9 @@ public class BattleHandler : MonoBehaviour
         AbilityData allyAbility = AbilityDatabase.getAbility(pokemon[0].getAbilityName());
         AbilityData enemyAbility = AbilityDatabase.getAbility(pokemon[3].getAbilityName());
         yield return OnStartAbilities(allyAbility, 0);
+        Debug.Log("Tried On Start Abilities");
         yield return OnStartAbilities(enemyAbility, 3);
+        yield return ResistStatusAbilities(allyAbility, 0);
         updateCurrentTask(0);
 
         int playerFleeAttempts = 0;

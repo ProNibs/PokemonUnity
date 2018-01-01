@@ -12,29 +12,39 @@ public class AbilityData
         END_TURN,
         MOVE_HITTING,
         STAT_MULTIPLIER,
+        MOVE_POWER_MULTIPLIERS,
         RESIST_STAT_CHANGES,
+        RESIST_STATUS,
+        RESISTANCE_TO_MOVES,
         IMMUNITIY_TO_MOVES,
-        IMMUNITY_TO_OTHER,
+        IMMUNITY_OR_RESIST_TO_OTHER,
         MODIFIES_EFFECTS,
         OTHER,
         FORM_CHANGING
     };
 
     // For Targets, Use following below:
-    // Target.SELF      / This is located in MoveData.cs if need to add Target
+    // Target.SELF      / This is located in MoveData.cs if need to edit Target
 
     public enum Conditions
     {   // High level explanation
         NONE,
         HAVE_HELD_ITEM,
         WEATHER,
-        STATUS,     // Hold a current status
+        TYPE,
         ON_KO,      // If would KO from 100% to 0%
         PHYSICAL,   // This refers to any move deemed Physical
         CONTACT,    // This refers to physical contact moves (not all Physical are contact)
         CRITICAL,
-        FLINCH,
-        TYPE,
+        Burn,       // This status occurs on holder of the ability
+        Freeze,
+        Paralyze,
+        Poison,
+        Sleep,
+        Toxic,
+        Flinch,
+        ANY_STATUS, 
+        HAS_EFFECT,     // Move has any added effects whatsoever.
         WHEN_HIT,
         HP_THRESHOLD,
     };
@@ -50,7 +60,8 @@ public class AbilityData
         SPD_MODIFY,
         SPE_MODIFY,
         ACC_MODIFY, // Accuracy
-        EVA_MODIFY, //Evade
+        EVA_MODIFY, //Evade,
+        DMG_BOOST,  // Damage boost
         Burn,
         Freeze,
         Paralyze,
@@ -59,7 +70,8 @@ public class AbilityData
         Toxic,
         Flinch,
         CHANGE_ABILITY,
-        CHANGE_ITEM
+        CHANGE_ITEM, 
+        NEGATE_DAMAGE,
     };
 
 
