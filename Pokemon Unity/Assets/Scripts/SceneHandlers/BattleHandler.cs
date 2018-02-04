@@ -3472,6 +3472,10 @@ public class BattleHandler : MonoBehaviour
                 yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
                                 " cannot be frozen!", 2.4f);
                 break;
+            case "Asleep":
+                yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " cannot fall asleep!", 2.4f);
+                break;
             default:
                 Debug.Log("Failed to display Immunity text");
                 break;
@@ -3493,8 +3497,8 @@ public class BattleHandler : MonoBehaviour
     //  Helper Functions for Battle Controller
     //
     /////////////////////////////////
-#region
-    #region
+#region Helper Functions for Battle Controller
+    #region Intiailization Functions
     private int[] initInitialLevels()
     {   // Used after battle is finished to check for evolutions
         int[] initialLevels = new int[6];
@@ -3560,7 +3564,7 @@ public class BattleHandler : MonoBehaviour
     ////////////
     // Pokeball Related Functions
     ///////////
-    #region
+    #region Pokeball and Capture Related Functions
     private IEnumerator PokeballThrowAnimation(int movingPokemon, bool trainerBattle)
     {
         //pokeball animation not yet implemented
@@ -3661,7 +3665,7 @@ public class BattleHandler : MonoBehaviour
     ///////////
     //  Damage Helper Functions
     ///////////
-    #region
+    #region Damage Calculation Functions
     private float SuperEffectiveModifier(int movingPokemon, int targetIndex)
     {
         float superEffectiveModifier =
@@ -3745,7 +3749,7 @@ public class BattleHandler : MonoBehaviour
     ///////////
     //  Battle Animations
     ///////////
-    #region
+    #region Battle Animation Functions
     private IEnumerator AnimateBattleBegin(bool trainerBattle, Pokemon[] opponentParty, string opponentName)
     {
         if (trainerBattle)
@@ -3920,8 +3924,8 @@ public class BattleHandler : MonoBehaviour
     ///////////
     //  Ability Functions
     ///////////
-    #region
-    private IEnumerator OnStartAbilities(AbilityData ability, int usingIndex)
+    #region Ability Functions
+    private IEnumerator OnEntranceAbilities(AbilityData ability, int usingIndex)
     {
         if (ability.getBattleOccurance() == AbilityData.BattleOccurance.ON_ENTRY)
         {
@@ -3949,7 +3953,7 @@ public class BattleHandler : MonoBehaviour
         if (ability.getBattleOccurance() == AbilityData.BattleOccurance.RESIST_STATUS)
         {
             int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
-            {   // Animations required for Stat Down
+            {   // Animations required for Resisting a status
                 switch (ability.getAction())
                 {
                     case AbilityData.Action.Poison:
@@ -3958,7 +3962,66 @@ public class BattleHandler : MonoBehaviour
                             yield return displayImmunityText(usingIndex, "Poison");
                             pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
                         }
-                        Debug.Log("Is Poisoned?: " + pokemon[usingIndex].getStatus());
+                        Dialog.UndrawDialogBox();
+                        break;
+
+                    case AbilityData.Action.Burn:
+                        if (pokemon[usingIndex].getStatus() == Pokemon.Status.BURNED)
+                        {
+                            yield return displayImmunityText(usingIndex, "Burn");
+                            pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
+                        }
+                        Dialog.UndrawDialogBox();
+                        break;
+
+                    case AbilityData.Action.Paralyze:
+                        if (pokemon[usingIndex].getStatus() == Pokemon.Status.PARALYZED)
+                        {
+                            yield return displayImmunityText(usingIndex, "Paralyze");
+                            pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
+                        }
+                        Dialog.UndrawDialogBox();
+                        break;
+
+                    case AbilityData.Action.Freeze:
+                        if (pokemon[usingIndex].getStatus() == Pokemon.Status.FROZEN)
+                        {
+                            yield return displayImmunityText(usingIndex, "Frozen");
+                            pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
+                        }
+                        Dialog.UndrawDialogBox();
+                        break;
+
+                    case AbilityData.Action.Sleep:
+                        if (pokemon[usingIndex].getStatus() == Pokemon.Status.ASLEEP)
+                        {
+                            yield return displayImmunityText(usingIndex, "Asleep");
+                            pokemon[usingIndex].setStatus(Pokemon.Status.NONE);
+                        }
+                        Dialog.UndrawDialogBox();
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator ResistStatChangeAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.RESIST_STAT_CHANGES)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
                         Dialog.UndrawDialogBox();
                         break;
                     default:
@@ -3967,6 +4030,252 @@ public class BattleHandler : MonoBehaviour
             }
         }
     }
+
+    private IEnumerator StatMultiplierAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.STAT_MULTIPLIER)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator MovePowerMultiplierAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.MOVE_POWER_MULTIPLIERS)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator OnSuccessfulMoveHitAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.MOVE_HITTING)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        else if (ability.getBattleOccurance() == AbilityData.BattleOccurance.RESISTANCE_TO_MOVES)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        else if (ability.getBattleOccurance() == AbilityData.BattleOccurance.IMMUNITIY_TO_MOVES)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator OtherResistAndImmunitiesAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.IMMUNITY_OR_RESIST_TO_OTHER)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator OnTurnEndAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.END_TURN)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator OnExitAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.ON_EXIT)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator FormChangeAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.FORM_CHANGING)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator ModifiesEffectsAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.MODIFIES_EFFECTS)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private IEnumerator OtherAbilities(AbilityData ability, int usingIndex)
+    {
+        if (ability.getBattleOccurance() == AbilityData.BattleOccurance.OTHER)
+        {
+            int targetIndex = GetTargets(ability.getTarget(), usingIndex)[0]; // Get first entry from return array
+            {   // Animations required for Stat Down
+                switch (ability.getAction())
+                {
+                    case AbilityData.Action.ATK_MODIFY:
+                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
+                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
+                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                        Dialog.UndrawDialogBox();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
 
     private int[] GetTargets(Target target, int User)
     {   // Only returns single-value arrays, but expandable once double-battles+ integrated.
@@ -4117,9 +4426,9 @@ public class BattleHandler : MonoBehaviour
         //pokemonStatsMod[3]
         AbilityData allyAbility = AbilityDatabase.getAbility(pokemon[0].getAbilityName());
         AbilityData enemyAbility = AbilityDatabase.getAbility(pokemon[3].getAbilityName());
-        yield return OnStartAbilities(allyAbility, 0);
+        yield return OnEntranceAbilities(allyAbility, 0);
         Debug.Log("Tried On Start Abilities");
-        yield return OnStartAbilities(enemyAbility, 3);
+        yield return OnEntranceAbilities(enemyAbility, 3);
         yield return ResistStatusAbilities(allyAbility, 0);
         updateCurrentTask(0);
 
