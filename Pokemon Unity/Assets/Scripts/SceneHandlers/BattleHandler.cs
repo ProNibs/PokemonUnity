@@ -3319,31 +3319,24 @@ public class BattleHandler : MonoBehaviour
                 }
                 else if (status == Pokemon.Status.BURNED)
                 {
-                    yield return
-                        StartCoroutine(
-                            drawTextAndWait(
+                    yield return StartCoroutine(drawTextAndWait(
                                 generatePreString(index) + pokemon[index].getName() + "'s burn was healed!", 2.4f));
                 }
                 else if (status == Pokemon.Status.FROZEN)
                 {
-                    yield return
-                        StartCoroutine(
-                            drawTextAndWait(generatePreString(index) + pokemon[index].getName() + " thawed out!", 2.4f))
+                    yield return StartCoroutine(drawTextAndWait(
+                                generatePreString(index) + pokemon[index].getName() + " thawed out!", 2.4f))
                         ;
                 }
                 else if (status == Pokemon.Status.PARALYZED)
                 {
-                    yield return
-                        StartCoroutine(
-                            drawTextAndWait(
+                    yield return StartCoroutine(drawTextAndWait(
                                 generatePreString(index) + pokemon[index].getName() + " was cured of its paralysis!",
                                 2.4f));
                 }
                 else if (status == Pokemon.Status.POISONED)
                 {
-                    yield return
-                        StartCoroutine(
-                            drawTextAndWait(
+                    yield return StartCoroutine(drawTextAndWait(
                                 generatePreString(index) + pokemon[index].getName() + " was cured of its poison!", 2.4f))
                         ;
                 }
@@ -3668,6 +3661,7 @@ public class BattleHandler : MonoBehaviour
     #region Damage Calculation Functions
     private float SuperEffectiveModifier(int movingPokemon, int targetIndex)
     {
+        Debug.Log("Attacking Type: " + movingPokemon + " Target Type: " + targetIndex);
         float superEffectiveModifier =
             getSuperEffectiveModifier(commandMove[movingPokemon].getType(),
                 pokemonType1[targetIndex]) *
@@ -4123,14 +4117,21 @@ public class BattleHandler : MonoBehaviour
             {   // Animations required for Stat Down
                 switch (ability.getAction())
                 {
-                    case AbilityData.Action.ATK_MODIFY:
-                        yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
-                                " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
-                        yield return ModifyStat(targetIndex, 0, ability.getActionNumber(), true);
-                        yield return new WaitForSeconds(statUpClip.length + 0.2f);
-                        Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
-                        Dialog.UndrawDialogBox();
-                        break;
+                    case AbilityData.Action.NEGATE_DAMAGE:
+                        switch (ability.getCondition())
+                        {
+                            case AbilityData.Conditions.TYPE:
+                                if (ability.getConditionText() == "GROUND")
+                                {
+                                    yield return drawTextAndWait(generatePreString(usingIndex) + pokemon[usingIndex].getName() +
+                                        " used " + pokemon[usingIndex].getAbilityName() + "!", 0.25f, 0.5f);
+                                    Debug.Log("Enemy Modified Attack: " + pokemonStatsMod[0][targetIndex]);
+                                    Dialog.UndrawDialogBox();
+                                    break;
+                                }
+                                break;
+                        }
+                            break;
                     default:
                         break;
                 }
@@ -4422,8 +4423,6 @@ public class BattleHandler : MonoBehaviour
         yield return StartCoroutine(AnimateBattleBegin(trainerBattle, opponentParty, opponentName));
 
         // Before updating task, check for on-switch effects
-        // A Pokemon.getAbility()
-        //pokemonStatsMod[3]
         AbilityData allyAbility = AbilityDatabase.getAbility(pokemon[0].getAbilityName());
         AbilityData enemyAbility = AbilityDatabase.getAbility(pokemon[3].getAbilityName());
         yield return OnEntranceAbilities(allyAbility, 0);
@@ -5524,9 +5523,7 @@ public class BattleHandler : MonoBehaviour
                                     if (commandTarget[movingPokemon] < 3)
                                     {
                                         //if target is player
-                                        yield return
-                                            StartCoroutine(
-                                                drawTextAndWait(
+                                        yield return StartCoroutine(drawTextAndWait(
                                                     SaveData.currentSave.playerName + " used the " +
                                                     commandItem[movingPokemon].getName() + "!", 2.4f));
                                         yield return StartCoroutine(Heal(commandTarget[movingPokemon], true));
@@ -5607,19 +5604,21 @@ public class BattleHandler : MonoBehaviour
                                     pokemon[movingPokemon].removeSleepTurn();
                                     if (pokemon[movingPokemon].getStatus() == Pokemon.Status.ASLEEP)
                                     {
-                                        yield return StartCoroutine(drawTextAndWait(
-                                                    generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
-                                                    " is \\nfast asleep.", 2.4f));
+                                        yield return StartCoroutine(drawTextAndWait(generatePreString(movingPokemon) + 
+                                                    pokemon[movingPokemon].getName() + " is \\nfast asleep.", 2.4f));
                                         canMove = false;
                                     }
                                     else
                                     {
                                         updatePokemonStatsDisplay(movingPokemon);
-                                        yield return StartCoroutine(drawTextAndWait(
-                                                    generatePreString(movingPokemon) + pokemon[movingPokemon].getName() +
-                                                    " woke up!", 2.4f));
+                                        yield return StartCoroutine(drawTextAndWait(generatePreString(movingPokemon) + 
+                                                    pokemon[movingPokemon].getName() +" woke up!", 2.4f));
                                     }
                                 }
+
+                                // Check for if target Pokemon is immune to the move!
+
+
                                 if (canMove)
                                 {
                                     //use the move
@@ -5726,7 +5725,7 @@ public class BattleHandler : MonoBehaviour
                                     //Feedback on the damage dealt
                                     if (superEffectiveModifier == 0)
                                     {
-                                        yield return StartCoroutine(drawTextAndWait("It had no effect...", 2.4f));
+                                        yield return StartCoroutine(drawTextAndWait("It doesn't effect " + pokemon[targetIndex].getName()+"...", 2.4f));
                                     }
                                     else if (commandMove[movingPokemon].getCategory() != MoveData.Category.STATUS)
                                     {
@@ -5866,7 +5865,7 @@ public class BattleHandler : MonoBehaviour
             ////////////////////////////////////////
             /// After-Effects State
             ////////////////////////////////////////
-            #region
+            #region After-Effects
             if (running)
             {
                 //running may be set to false by a successful flee
@@ -5940,7 +5939,7 @@ public class BattleHandler : MonoBehaviour
             ////////////////////////////////////////
             /// Replacement State
             ////////////////////////////////////////
-            #region
+            #region Replacement
             if (running)
             {
                 //check if any opponents are left

@@ -164,6 +164,11 @@ public class AbilityData
     {
         return condition;
     }
+    
+    public string getConditionText()
+    {
+        return conditionText;
+    }
 
     public Action getAction()
     {
