@@ -8625,7 +8625,7 @@ MonoBehaviour:
     encounterMorning: 0
     encounterDay: 0
     encounterNight: 1
-  - ID: 15
+  - ID: 16
     minLevel: 10
     maxLevel: 12
     pokemonRarity: 1
@@ -80827,6 +80827,14 @@ Prefab:
     - target: {fileID: 100006, guid: c37148133bc1a9e478096d63bd5cf423, type: 2}
       propertyPath: m_Name
       value: CutTree
+      objectReference: {fileID: 0}
+    - target: {fileID: 8200000, guid: c37148133bc1a9e478096d63bd5cf423, type: 2}
+      propertyPath: panLevelCustomCurve.m_RotationOrder
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8200000, guid: c37148133bc1a9e478096d63bd5cf423, type: 2}
+      propertyPath: reverbZoneMixCustomCurve.m_RotationOrder
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: c37148133bc1a9e478096d63bd5cf423, type: 2}
