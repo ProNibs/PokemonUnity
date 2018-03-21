@@ -8625,7 +8625,7 @@ MonoBehaviour:
     encounterMorning: 0
     encounterDay: 0
     encounterNight: 1
-  - ID: 448
+  - ID: 15
     minLevel: 10
     maxLevel: 12
     pokemonRarity: 1
@@ -12112,6 +12112,14 @@ Prefab:
     - target: {fileID: 11400000, guid: 9a47f5573afcc29419a9b7dc07660690, type: 2}
       propertyPath: dontFadeMusic
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8200000, guid: 9a47f5573afcc29419a9b7dc07660690, type: 2}
+      propertyPath: panLevelCustomCurve.m_RotationOrder
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8200000, guid: 9a47f5573afcc29419a9b7dc07660690, type: 2}
+      propertyPath: reverbZoneMixCustomCurve.m_RotationOrder
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 9a47f5573afcc29419a9b7dc07660690, type: 2}

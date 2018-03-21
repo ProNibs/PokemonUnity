@@ -3476,6 +3476,10 @@ public class BattleHandler : MonoBehaviour
     }
     private float PlayCry(Pokemon pokemon)
     {
+        if (pokemon.GetCry() == null)   // For ones that aren't implemented
+        {
+            pokemon = new Pokemon(197, Pokemon.Gender.CALCULATE, 12, "Great Ball", "", name, 0);
+        }
         SfxHandler.Play(pokemon.GetCry(), pokemon.GetCryPitch());
         return pokemon.GetCry().length / pokemon.GetCryPitch();
     }

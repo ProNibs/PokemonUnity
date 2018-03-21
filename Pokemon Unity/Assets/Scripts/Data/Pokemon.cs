@@ -513,6 +513,7 @@ public class Pokemon
             return "Somewhere";
         }
     }
+
     public string swapHeldItem(string newItem)
     {
         string oldItem = this.heldItem;
@@ -1316,6 +1317,7 @@ public class Pokemon
     {
         return abilityName;
     }
+
     public int getMoveIndex(string move)
     {
         for (int i = 0; i < moveset.Length; i++)

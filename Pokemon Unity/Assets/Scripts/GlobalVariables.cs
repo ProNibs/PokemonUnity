@@ -143,7 +143,7 @@ public class GlobalVariables : MonoBehaviour
         SaveData.currentSave.PC.addPokemon(new Pokemon(393, "Surf Bloke", Pokemon.Gender.MALE, 15, false, "Ultra Ball", //starters not implemented
             "", name,
             31, 31, 31, 31, 31, 31, 0, 252, 0, 0, 0, 252, "ADAMANT", 1,
-            new string[] {"Drill Peck", "Surf", "Growl", "Dragon Rage"}, new int[] {0, 0, 0, 3}));
+            new string[] {"Drill Peck", "Surf", "Sand Attack", "Dragon Rage"}, new int[] {0, 0, 0, 3}));
 
 
         SaveData.currentSave.PC.boxes[0][1].setNickname("Greg");
